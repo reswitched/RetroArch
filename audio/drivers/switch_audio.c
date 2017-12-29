@@ -22,7 +22,7 @@
 #include<libtransistor/nx.h>
 
 #include "../audio_driver.h"
-#include "../verbosity.h"
+#include "../../verbosity.h"
 
 static const int sample_rate           = 48000;
 static const int max_num_samples       = sample_rate;
