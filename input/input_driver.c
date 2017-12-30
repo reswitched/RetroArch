@@ -372,8 +372,8 @@ static input_remote_t *input_driver_remote        = NULL;
 #ifdef HAVE_KEYMAPPER
 static input_mapper_t *input_driver_mapper        = NULL;
 #endif
-const input_driver_t *current_input               = NULL;
-void *current_input_data                          = NULL;
+static const input_driver_t *current_input        = NULL;
+static void *current_input_data                   = NULL;
 static bool input_driver_block_hotkey             = false;
 static bool input_driver_block_libretro_input     = false;
 static bool input_driver_nonblock_state           = false;
@@ -448,6 +448,11 @@ const char *input_driver_find_ident(int idx)
 const char* config_get_input_driver_options(void)
 {
    return char_list_new_special(STRING_LIST_INPUT_DRIVERS, NULL);
+}
+
+void *input_get_data(void)
+{
+   return current_input_data;
 }
 
 const input_driver_t *input_get_ptr(void)
@@ -561,11 +566,14 @@ void input_poll(void)
    input_driver_turbo_btns.count++;
 
    for (i = 0; i < max_users; i++)
-   {
       input_driver_turbo_btns.frame_enable[i] = 0;
 
-      if (!input_driver_block_libretro_input &&
-            libretro_input_binds[i][RARCH_TURBO_ENABLE].valid)
+   if (input_driver_block_libretro_input)
+      return;
+
+   for (i = 0; i < max_users; i++)
+   {
+      if (libretro_input_binds[i][RARCH_TURBO_ENABLE].valid)
       {
          rarch_joypad_info_t joypad_info;
          joypad_info.axis_threshold = input_driver_axis_threshold;
@@ -577,9 +585,6 @@ void input_poll(void)
                (unsigned)i, RETRO_DEVICE_JOYPAD, 0, RARCH_TURBO_ENABLE);
       }
    }
-
-   if (input_driver_block_libretro_input)
-      return;
 
 #ifdef HAVE_OVERLAY
    if (overlay_ptr && input_overlay_is_alive(overlay_ptr))
@@ -1115,11 +1120,6 @@ bool input_driver_has_capabilities(void)
    if (!current_input->get_capabilities || !current_input_data)
       return false;
    return true;
-}
-
-void input_driver_poll(void)
-{
-   current_input->poll(current_input_data);
 }
 
 bool input_driver_init(void)
