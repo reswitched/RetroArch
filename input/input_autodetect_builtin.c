@@ -511,7 +511,7 @@ DECL_BTN(left, 12) \
 DECL_BTN(right, 14) \
 DECL_BTN(l, 6) \
 DECL_BTN(r, 7) \
-DECL_BTN(l2, 8) \
+DECL_MENU(8) \
 DECL_BTN(r2, 9) \
 DECL_BTN(l3, 4) \
 DECL_BTN(r3, 5) \
