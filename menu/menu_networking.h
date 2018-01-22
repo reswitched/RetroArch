@@ -19,9 +19,13 @@
 #define _MENU_NETWORKING_H
 
 #include <stdint.h>
+
 #include <retro_common_api.h>
+#include <retro_environment.h>
 
 #include <lists/file_list.h>
+
+#include "../msg_hash.h"
 
 RETRO_BEGIN_DECLS
 

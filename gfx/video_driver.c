@@ -262,6 +262,12 @@ static const video_driver_t *video_drivers[] = {
 #ifdef XENON
    &video_xenon360,
 #endif
+#if defined(HAVE_D3D11)
+   &video_d3d11,
+#endif
+#if defined(HAVE_D3D12)
+   &video_d3d12,
+#endif
 #if defined(HAVE_D3D)
    &video_d3d,
 #endif
@@ -415,7 +421,7 @@ static const d3d_renderchain_driver_t *renderchain_d3d_drivers[] = {
    &hlsl_d3d9_renderchain,
 #endif
 #if defined(_WIN32) && defined(HAVE_D3D8)
-   &d3d8_renderchain,
+   &d3d8_d3d_renderchain,
 #endif
    &null_d3d_renderchain,
    NULL
@@ -1168,11 +1174,9 @@ void video_driver_set_texture_enable(bool enable, bool fullscreen)
 void video_driver_set_texture_frame(const void *frame, bool rgb32,
       unsigned width, unsigned height, float alpha)
 {
-#ifdef HAVE_MENU
    if (video_driver_poke && video_driver_poke->set_texture_frame)
       video_driver_poke->set_texture_frame(video_driver_data,
             frame, rgb32, width, height, alpha);
-#endif
 }
 
 #ifdef HAVE_OVERLAY
@@ -1803,6 +1807,8 @@ bool video_driver_find_driver(void)
 
       current_video                        = NULL;
 
+      (void)hwr;
+
 #if defined(HAVE_VULKAN)
       if (hwr && hw_render_context_is_vulkan(hwr->context_type))
       {
@@ -1843,13 +1849,16 @@ bool video_driver_find_driver(void)
       current_video = (video_driver_t*)video_driver_find_handle(i);
    else
    {
-      unsigned d;
-      RARCH_ERR("Couldn't find any video driver named \"%s\"\n",
-            settings->arrays.video_driver);
-      RARCH_LOG_OUTPUT("Available video drivers are:\n");
-      for (d = 0; video_driver_find_handle(d); d++)
-         RARCH_LOG_OUTPUT("\t%s\n", video_driver_find_ident(d));
-      RARCH_WARN("Going to default to first video driver...\n");
+      if (verbosity_is_enabled())
+      {
+         unsigned d;
+         RARCH_ERR("Couldn't find any video driver named \"%s\"\n",
+               settings->arrays.video_driver);
+         RARCH_LOG_OUTPUT("Available video drivers are:\n");
+         for (d = 0; video_driver_find_handle(d); d++)
+            RARCH_LOG_OUTPUT("\t%s\n", video_driver_find_ident(d));
+         RARCH_WARN("Going to default to first video driver...\n");
+      }
 
       current_video = (video_driver_t*)video_driver_find_handle(0);
 

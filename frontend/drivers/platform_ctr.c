@@ -21,6 +21,11 @@
 #include <boolean.h>
 
 #include <3ds.h>
+#include <3ds/svc.h>
+#include <3ds/os.h>
+#include <3ds/services/cfgu.h>
+#include <3ds/services/ptmu.h>
+#include <3ds/services/mcuhwc.h>
 
 #include <file/file_path.h>
 
@@ -99,10 +104,14 @@ static void frontend_ctr_get_environment_settings(int *argc, char *argv[],
 
 static void frontend_ctr_deinit(void *data)
 {
-   extern PrintConsole* currentConsole;
    Handle lcd_handle;
+   u32 parallax_layer_reg_state;
    u8 not_2DS;
+
+   extern PrintConsole* currentConsole;
+
    (void)data;
+
 #ifndef IS_SALAMANDER
    verbosity_enable();
 
@@ -115,18 +124,21 @@ static void frontend_ctr_deinit(void *data)
       wait_for_input();
 
    CFGU_GetModelNintendo2DS(&not_2DS);
+
    if(not_2DS && srvGetServiceHandle(&lcd_handle, "gsp::Lcd") >= 0)
    {
       u32 *cmdbuf = getThreadCommandBuffer();
-      cmdbuf[0] = 0x00110040;
-      cmdbuf[1] = 2;
+      cmdbuf[0]   = 0x00110040;
+      cmdbuf[1]   = 2;
       svcSendSyncRequest(lcd_handle);
       svcCloseHandle(lcd_handle);
    }
 
-   u32 parallax_layer_reg_state = (*(float*)0x1FF81080 == 0.0)? 0x0 : 0x00010001;
+   parallax_layer_reg_state = (*(float*)0x1FF81080 == 0.0)? 0x0 : 0x00010001;
    GSPGPU_WriteHWRegs(0x202000, &parallax_layer_reg_state, 4);
 
+   mcuHwcExit();
+   ptmuExit();
    cfguExit();
    ndspExit();
    csndExit();
@@ -144,6 +156,7 @@ static void frontend_ctr_exec(const char *path, bool should_load_game)
       char args[0x300 - 0x4];
    }param;
    int len;
+   uint64_t app_ID;
    Result res;
    extern char __argv_hmac[0x20];
 
@@ -164,7 +177,6 @@ static void frontend_ctr_exec(const char *path, bool should_load_game)
       RARCH_LOG("content path: [%s].\n", path_get(RARCH_PATH_CONTENT));
    }
 #endif
-   uint64_t app_ID;
    if(!path || !*path)
    {
       APT_GetProgramID(&app_ID);
@@ -191,12 +203,13 @@ static void frontend_ctr_exec(const char *path, bool should_load_game)
       RARCH_LOG("APP_ID [%s] -- > 0x%016llX.\n", app_ID_str, app_ID);
    }
 
-   if(R_SUCCEEDED(res = APT_PrepareToDoApplicationJump(0, app_ID, 0x1)))
+   res = APT_PrepareToDoApplicationJump(0, app_ID, 0x1);
+   if(R_SUCCEEDED(res))
         res = APT_DoApplicationJump(&param, sizeof(param.argc) + len, __argv_hmac);
 
    if(res)
    {
-      RARCH_LOG("Failed to load core\n");
+      RARCH_ERR("Failed to load core\n");
       dump_result_value(res);
    }
 
@@ -364,13 +377,37 @@ static void frontend_ctr_init(void *data)
    if(ndspInit() != 0)
       audio_ctr_dsp = audio_null;
    cfguInit();
+   ptmuInit();
+   mcuHwcInit();
 #endif
 }
 
 
 static int frontend_ctr_get_rating(void)
 {
-   return 3;
+   u8 device_model = 0xFF;
+   CFGU_GetSystemModel(&device_model);/*(0 = O3DS, 1 = O3DSXL, 2 = N3DS, 3 = 2DS, 4 = N3DSXL, 5 = N2DSXL)*/
+
+   switch (device_model)
+   {
+      case 0:
+      case 1:
+      case 3:
+         /*Old 3/2DS*/
+         return 3;
+
+      case 2:
+      case 4:
+      case 5:
+         /*New 3/2DS*/
+         return 6;
+
+      default:
+         /*Unknown Device Or Check Failed*/
+         break;
+   }
+
+   return -1;
 }
 
 enum frontend_architecture frontend_ctr_get_architecture(void)
@@ -399,6 +436,100 @@ static int frontend_ctr_parse_drive_list(void *data, bool load_content)
    return 0;
 }
 
+static uint64_t frontend_ctr_get_mem_total(void)
+{
+	return osGetMemRegionSize(MEMREGION_ALL);
+}
+
+static uint64_t frontend_ctr_get_mem_used(void)
+{
+	return osGetMemRegionUsed(MEMREGION_ALL);
+}
+
+static enum frontend_powerstate frontend_ctr_get_powerstate(int *seconds, int *percent)
+{
+	u8 battery_percent = 0;
+	u8 charging = 0;
+	enum frontend_powerstate pwr_state = FRONTEND_POWERSTATE_NONE;
+	
+	mcuHwcGetBatteryLevel(&battery_percent);
+	*percent = battery_percent;
+	
+	/* 3ds does not support seconds of charge remaining */
+	*seconds = -1;
+	
+	PTMU_GetBatteryChargeState(&charging);
+	if (charging)
+	{
+		if (battery_percent == 100)
+		{
+			pwr_state = FRONTEND_POWERSTATE_CHARGED;
+		}
+		else
+		{
+			pwr_state = FRONTEND_POWERSTATE_CHARGING;
+		}
+	}
+	else
+	{
+		pwr_state = FRONTEND_POWERSTATE_ON_POWER_SOURCE;
+	}
+	
+	return pwr_state;
+}
+
+static void frontend_ctr_get_os(char *s, size_t len, int *major, int *minor)
+{
+	OS_VersionBin cver;
+	OS_VersionBin nver;
+	
+	strlcpy(s, "3DS OS", len);
+	Result data_invalid = osGetSystemVersionData(&nver, &cver);
+	if (data_invalid == 0)
+	{
+		*major = cver.mainver;
+		*minor = cver.minor;
+	}
+	else 
+	{
+		*major = 0;
+		*minor = 0;
+	}
+
+}
+
+static void frontend_ctr_get_name(char *s, size_t len)
+{
+   u8 device_model = 0xFF;
+   CFGU_GetSystemModel(&device_model);/*(0 = O3DS, 1 = O3DSXL, 2 = N3DS, 3 = 2DS, 4 = N3DSXL, 5 = N2DSXL)*/
+
+   switch (device_model)
+   {
+      case 0:
+		 strlcpy(s, "Old 3DS", len);
+		 break;
+      case 1:
+		 strlcpy(s, "Old 3DS XL", len);
+		 break;
+      case 2:
+		 strlcpy(s, "New 3DS", len);
+		 break;
+	  case 3:
+		 strlcpy(s, "Old 2DS", len);
+		 break;
+      case 4:
+		 strlcpy(s, "New 3DS XL", len);
+		 break;
+      case 5:
+		 strlcpy(s, "New 2DS XL", len);
+		 break;
+
+      default:
+         strlcpy(s, "Unknown Device", len);
+         break;
+   }
+}
+
 frontend_ctx_driver_t frontend_ctx_ctr = {
    frontend_ctr_get_environment_settings,
    frontend_ctr_init,
@@ -412,15 +543,15 @@ frontend_ctx_driver_t frontend_ctx_ctr = {
    frontend_ctr_set_fork,
 #endif
    frontend_ctr_shutdown,
-   NULL,                         /* get_name */
-   NULL,                         /* get_os */
+   frontend_ctr_get_name,
+   frontend_ctr_get_os,
    frontend_ctr_get_rating,
    NULL,                         /* load_content */
    frontend_ctr_get_architecture,
-   NULL,                         /* get_powerstate */
+   frontend_ctr_get_powerstate,
    frontend_ctr_parse_drive_list,
-   NULL,                         /* get_mem_total */
-   NULL,                         /* get_mem_free */
+   frontend_ctr_get_mem_total,
+   frontend_ctr_get_mem_used,
    NULL,                         /* install_signal_handler */
    NULL,                         /* get_signal_handler_state */
    NULL,                         /* set_signal_handler_state */

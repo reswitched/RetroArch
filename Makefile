@@ -16,11 +16,15 @@ include config.mk
 
 TARGET = retroarch
 
-OBJDIR := obj-unix
+ifeq ($(DEBUG), 1)
+   OBJDIR := obj-unix/debug
+else
+   OBJDIR := obj-unix/release
+endif
 
 OBJ :=
 LIBS :=
-DEFINES := -DHAVE_CONFIG_H -DRARCH_INTERNAL -DHAVE_OVERLAY
+DEFINES := -DHAVE_CONFIG_H -DRARCH_INTERNAL
 DEFINES += -DGLOBAL_CONFIG_DIR='"$(GLOBAL_CONFIG_DIR)"'
 
 ifneq ($(findstring BSD,$(OS)),)
@@ -71,6 +75,7 @@ endif
 
 ifeq ($(DEBUG), 1)
    OPTIMIZE_FLAG = -O0 -g
+   DEFINES += -DDEBUG -D_DEBUG
 else
    OPTIMIZE_FLAG = -O3 -ffast-math
 endif
@@ -79,7 +84,7 @@ ifneq ($(findstring Win32,$(OS)),)
    LDFLAGS += -mwindows
 endif
 
-CFLAGS   += -Wall $(OPTIMIZE_FLAG) $(INCLUDE_DIRS) $(DEBUG_FLAG) -I. -Ideps -Ideps/stb
+CFLAGS   += -Wall $(OPTIMIZE_FLAG) $(INCLUDE_DIRS) -I. -Ideps -Ideps/stb
 
 APPEND_CFLAGS := $(CFLAGS)
 CXXFLAGS += $(APPEND_CFLAGS) -std=c++11 -D__STDC_CONSTANT_MACROS
@@ -197,13 +202,20 @@ install: $(TARGET)
 	mkdir -p $(DESTDIR)$(PREFIX)/share/applications 2>/dev/null || /bin/true
 	mkdir -p $(DESTDIR)$(MAN_DIR)/man6 2>/dev/null || /bin/true
 	mkdir -p $(DESTDIR)$(PREFIX)/share/pixmaps 2>/dev/null || /bin/true
-	install -m755 $(TARGET) $(DESTDIR)$(BIN_DIR)
-	install -m755 tools/cg2glsl.py $(DESTDIR)$(BIN_DIR)/retroarch-cg2glsl
-	install -m644 retroarch.cfg $(DESTDIR)$(GLOBAL_CONFIG_DIR)/retroarch.cfg
-	install -m644 retroarch.desktop $(DESTDIR)$(PREFIX)/share/applications
-	install -m644 docs/retroarch.6 $(DESTDIR)$(MAN_DIR)/man6
-	install -m644 docs/retroarch-cg2glsl.6 $(DESTDIR)$(MAN_DIR)/man6
-	install -m644 media/retroarch.svg $(DESTDIR)$(PREFIX)/share/pixmaps
+	cp $(TARGET) $(DESTDIR)$(BIN_DIR)
+	cp tools/cg2glsl.py $(DESTDIR)$(BIN_DIR)/retroarch-cg2glsl
+	cp retroarch.cfg $(DESTDIR)$(GLOBAL_CONFIG_DIR)
+	cp retroarch.desktop $(DESTDIR)$(PREFIX)/share/applications
+	cp docs/retroarch.6 $(DESTDIR)$(MAN_DIR)/man6
+	cp docs/retroarch-cg2glsl.6 $(DESTDIR)$(MAN_DIR)/man6
+	cp media/retroarch.svg $(DESTDIR)$(PREFIX)/share/pixmaps
+	chmod 755 $(DESTDIR)$(BIN_DIR)/$(TARGET)
+	chmod 755 $(DESTDIR)$(BIN_DIR)/retroarch-cg2glsl
+	chmod 644 $(DESTDIR)$(GLOBAL_CONFIG_DIR)/retroarch.cfg
+	chmod 644 $(DESTDIR)$(PREFIX)/share/applications/retroarch.desktop
+	chmod 644 $(DESTDIR)$(MAN_DIR)/man6/retroarch.6
+	chmod 644 $(DESTDIR)$(MAN_DIR)/man6/retroarch-cg2glsl.6
+	chmod 644 $(DESTDIR)$(PREFIX)/share/pixmaps/retroarch.svg
 	@if test -d media/assets; then \
 		echo "Installing media assets..."; \
 		mkdir -p $(DESTDIR)$(ASSETS_DIR)/retroarch/assets/xmb; \

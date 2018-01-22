@@ -405,19 +405,24 @@ static bool format_support(const drmModePlanePtr ovr, uint32_t fmt)
 static uint64_t drm_plane_type(drmModePlane *plane)
 {
    int i,j;
-   /* The property values and their names are stored in different arrays, so we
-    * access them simultaneously here.
-    * We are interested in OVERLAY planes only, that's type 0 or DRM_PLANE_TYPE_OVERLAY
+
+   /* The property values and their names are stored in different arrays, 
+    * so we access them simultaneously here.
+    * We are interested in OVERLAY planes only, that's 
+    * type 0 or DRM_PLANE_TYPE_OVERLAY
     * (see /usr/xf86drmMode.h for definition). */
    drmModeObjectPropertiesPtr props =
-      drmModeObjectGetProperties(drm.fd, plane->plane_id, DRM_MODE_OBJECT_PLANE);
+      drmModeObjectGetProperties(drm.fd, plane->plane_id,
+            DRM_MODE_OBJECT_PLANE);
 
    for (j = 0; j < props->count_props; j++)
    {
       /* found the type property */
-      if (string_is_equal_fast(drmModeGetProperty(drm.fd, props->props[j])->name, "type", 4))
+      if (string_is_equal(
+               drmModeGetProperty(drm.fd, props->props[j])->name, "type"))
          return (props->prop_values[j]);
    }
+
    return (0);
 }
 
@@ -972,10 +977,8 @@ static const video_poke_interface_t drm_poke_interface = {
    NULL, /* get_proc_address */
    drm_set_aspect_ratio,
    NULL, /* drm_apply_state_changes */
-#ifdef HAVE_MENU
    drm_set_texture_frame,
    drm_set_texture_enable,
-#endif
    NULL, /* drm_set_osd_msg */
    NULL  /* drm_show_mouse */
 };

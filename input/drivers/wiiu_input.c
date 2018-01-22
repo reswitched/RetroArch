@@ -105,7 +105,7 @@ static int16_t wiiu_pointer_device_state(wiiu_input_t* wiiu, unsigned id)
 		{
 			retro_bits_t state;
 			wiiu->joypad->get_buttons(0, &state);
-			return BIT256_GET(state, VPAD_BUTTON_TOUCH) ? 1 : 0;
+			return BIT256_GET(state, VPAD_BUTTON_TOUCH_BIT) ? 1 : 0;
 		}
 		case RETRO_DEVICE_ID_POINTER_X:
 			return wiiu->joypad->axis(0, 0xFFFF0004UL);
@@ -120,8 +120,11 @@ static void wiiu_input_poll(void *data)
 {
    wiiu_input_t *wiiu = (wiiu_input_t*)data;
 
-   if (wiiu && wiiu->joypad)
-      wiiu->joypad->poll();
+   if(!wiiu)
+     return;
+
+   if(wiiu->joypad)
+     wiiu->joypad->poll();
 }
 
 static bool wiiu_key_pressed(int key)

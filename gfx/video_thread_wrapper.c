@@ -166,7 +166,6 @@ struct thread_video
    const input_driver_t **input;
    void **input_data;
 
-#if defined(HAVE_MENU)
    struct
    {
       void *frame;
@@ -179,7 +178,6 @@ struct thread_video
       bool enable;
       bool full_screen;
    } texture;
-#endif
    bool apply_state_changes;
 
    bool alive;
@@ -1154,7 +1152,6 @@ static void thread_set_aspect_ratio(void *data, unsigned aspectratio_idx)
    video_thread_send_and_wait_user_to_thread(thr, &pkt);
 }
 
-#if defined(HAVE_MENU)
 static void thread_set_texture_frame(void *data, const void *frame,
       bool rgb32, unsigned width, unsigned height, float alpha)
 {
@@ -1210,7 +1207,6 @@ static void thread_set_osd_msg(void *data,
    if (thr->poke && thr->poke->set_osd_msg)
       thr->poke->set_osd_msg(thr->driver_data, video_info, msg, params, font);
 }
-#endif
 
 static uintptr_t thread_load_texture(void *video_data, void *data,
       bool threaded, enum texture_filter_type filter_type)
@@ -1270,14 +1266,9 @@ static const video_poke_interface_t thread_poke = {
    NULL, /* get_proc_address */
    thread_set_aspect_ratio,
    thread_apply_state_changes,
-#if defined(HAVE_MENU)
    thread_set_texture_frame,
    thread_set_texture_enable,
    thread_set_osd_msg,
-#else
-   NULL,
-   NULL,
-#endif
 
    NULL,
    NULL,

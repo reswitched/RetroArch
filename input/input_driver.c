@@ -176,8 +176,14 @@ static input_device_driver_t *joypad_drivers[] = {
 #ifdef DJGPP
    &dos_joypad,
 #endif
-#ifdef HAVE_HID
+/* Selecting the HID gamepad driver disables the Wii U gamepad. So while
+ * we want the HID code to be compiled & linked, we don't want the driver
+ * to be selectable in the UI. */
+#if defined(HAVE_HID) && !defined(WIIU)
    &hid_joypad,
+#endif
+#ifdef EMSCRIPTEN
+   &rwebpad_joypad,
 #endif
    &null_joypad,
    NULL,
@@ -235,12 +241,14 @@ static const uint8_t buttons[] = {
    RETRO_DEVICE_ID_JOYPAD_B,
 };
 
-
 static uint16_t input_config_vid[MAX_USERS];
 static uint16_t input_config_pid[MAX_USERS];
 
+static char input_device_display_names[MAX_INPUT_DEVICES][64];
+static char input_device_config_names [MAX_INPUT_DEVICES][64];
+char        input_device_names        [MAX_INPUT_DEVICES][64];
+
 uint64_t lifecycle_state;
-char input_device_names[MAX_INPUT_DEVICES][64];
 struct retro_keybind input_config_binds[MAX_USERS][RARCH_BIND_LIST_END];
 struct retro_keybind input_autoconf_binds[MAX_USERS][RARCH_BIND_LIST_END];
 const struct retro_keybind *libretro_input_binds[MAX_USERS];
@@ -799,7 +807,7 @@ void state_tracker_update_input(uint16_t *input1, uint16_t *input2)
 static INLINE bool input_keys_pressed_iterate(unsigned i,
       retro_bits_t* p_new_state)
 {
-   if ((i >= RARCH_FIRST_META_KEY) && 
+   if ((i >= RARCH_FIRST_META_KEY) &&
          BIT64_GET(lifecycle_state, i)
       )
       return true;
@@ -1826,6 +1834,15 @@ const void *hid_driver_get_data(void)
    return hid_data;
 }
 
+/* This is only to be called after we've invoked free() on the
+ * HID driver; the memory will have already been freed, so we need to
+ * reset the pointer.
+ */
+void hid_driver_reset_data(void)
+{
+   hid_data = NULL;
+}
+
 /**
  * hid_driver_find_ident:
  * @idx                : index of driver to get handle to.
@@ -2322,13 +2339,13 @@ static void parse_hat(struct retro_keybind *bind, const char *str)
       return;
    }
 
-   if      (string_is_equal_fast(dir, "up", 2))
+   if      (string_is_equal(dir, "up"))
       hat_dir = HAT_UP_MASK;
-   else if (string_is_equal_fast(dir, "down", 4))
+   else if (string_is_equal(dir, "down"))
       hat_dir = HAT_DOWN_MASK;
-   else if (string_is_equal_fast(dir, "left", 4))
+   else if (string_is_equal(dir, "left"))
       hat_dir = HAT_LEFT_MASK;
-   else if (string_is_equal_fast(dir, "right", 5))
+   else if (string_is_equal(dir, "right"))
       hat_dir = HAT_RIGHT_MASK;
 
    if (hat_dir)
@@ -2678,6 +2695,20 @@ const char *input_config_get_device_name(unsigned port)
    return input_device_names[port];
 }
 
+const char *input_config_get_device_display_name(unsigned port)
+{
+   if (string_is_empty(input_device_display_names[port]))
+      return NULL;
+   return input_device_display_names[port];
+}
+
+const char *input_config_get_device_config_name(unsigned port)
+{
+   if (string_is_empty(input_device_config_names[port]))
+      return NULL;
+   return input_device_config_names[port];
+}
+
 void input_config_set_device_name(unsigned port, const char *name)
 {
    if (!string_is_empty(name))
@@ -2690,10 +2721,40 @@ void input_config_set_device_name(unsigned port, const char *name)
    }
 }
 
+void input_config_set_device_config_name(unsigned port, const char *name)
+{
+   if (!string_is_empty(name))
+   {
+      strlcpy(input_device_config_names[port],
+            name,
+            sizeof(input_device_config_names[port]));
+   }
+}
+
+void input_config_set_device_display_name(unsigned port, const char *name)
+{
+   if (!string_is_empty(name))
+   {
+      strlcpy(input_device_display_names[port],
+            name,
+            sizeof(input_device_display_names[port]));
+   }
+}
+
 void input_config_clear_device_name(unsigned port)
 {
    input_device_names[port][0] = '\0';
    input_autoconfigure_joypad_reindex_devices();
+}
+
+void input_config_clear_device_display_name(unsigned port)
+{
+   input_device_display_names[port][0] = '\0';
+}
+
+void input_config_clear_device_config_name(unsigned port)
+{
+   input_device_config_names[port][0] = '\0';
 }
 
 unsigned *input_config_get_device_ptr(unsigned port)

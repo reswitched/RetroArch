@@ -932,7 +932,9 @@ static void vulkan_free(void *data)
       font_driver_free_osd();
 
       vulkan_deinit_static_resources(vk);
+#ifdef HAVE_OVERLAY
       vulkan_overlay_free(vk);
+#endif
 
       if (vk->filter_chain)
          vulkan_filter_chain_free((vulkan_filter_chain_t*)vk->filter_chain);
@@ -2115,7 +2117,6 @@ static bool vulkan_get_hw_render_interface(void *data,
    return vk->hw.enable;
 }
 
-#if defined(HAVE_MENU)
 static void vulkan_set_texture_frame(void *data,
       const void *frame, bool rgb32, unsigned width, unsigned height,
       float alpha)
@@ -2197,7 +2198,6 @@ static void vulkan_set_osd_msg(void *data,
 {
    font_driver_render_msg(video_info, font, msg, params);
 }
-#endif
 
 static uintptr_t vulkan_load_texture(void *video_data, void *data,
       bool threaded, enum texture_filter_type filter_type)
@@ -2274,18 +2274,11 @@ static const video_poke_interface_t vulkan_poke_interface = {
    NULL,
    vulkan_set_aspect_ratio,
    vulkan_apply_state_changes,
-#if defined(HAVE_MENU)
    vulkan_set_texture_frame,
    vulkan_set_texture_enable,
-#else
-   NULL,
-   NULL,
-#endif
-#ifdef HAVE_MENU
    vulkan_set_osd_msg,
-#endif
    vulkan_show_mouse,
-   NULL,
+   NULL,                               /* grab_mouse_toggle */
    vulkan_get_current_shader,
    vulkan_get_current_sw_framebuffer,
    vulkan_get_hw_render_interface,
@@ -2619,8 +2612,6 @@ video_driver_t video_vulkan = {
 
 #ifdef HAVE_OVERLAY
    vulkan_get_overlay_interface,
-#else
-   NULL,
 #endif
    vulkan_get_poke_interface,
    NULL,                         /* vulkan_wrap_type_to_enum */

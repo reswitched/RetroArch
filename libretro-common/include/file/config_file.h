@@ -52,6 +52,17 @@ RETRO_BEGIN_DECLS
       base->var = tmp; \
 } while(0)
 
+struct config_file
+{
+   char *path;
+   struct config_entry_list *entries;
+   struct config_entry_list *tail;
+   unsigned include_depth;
+
+   struct config_include_list *includes;
+};
+
+
 typedef struct config_file config_file_t;
 
 /* Config file format
@@ -153,6 +164,10 @@ void config_set_bool(config_file_t *conf, const char *entry, bool val);
 
 /* Write the current config to a file. */
 bool config_file_write(config_file_t *conf, const char *path);
+
+/* Dump the current config to an already opened file.
+ * Does not close the file. */
+void config_file_dump(config_file_t *conf, FILE *file);
 
 bool config_file_exists(const char *path);
 

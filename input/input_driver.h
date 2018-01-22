@@ -185,15 +185,19 @@ struct hid_driver
 {
    void *(*init)(void);
    bool (*query_pad)(void *, unsigned);
-   void (*free)(void *);
+   void (*free)(const void *);
    bool (*button)(void *, unsigned, uint16_t);
    void (*get_buttons)(void *, unsigned, retro_bits_t *);
    int16_t (*axis)(void *, unsigned, uint32_t);
    void (*poll)(void *);
    bool (*set_rumble)(void *, unsigned, enum retro_rumble_effect, uint16_t);
    const char *(*name)(void *, unsigned);
-
    const char *ident;
+   void (*send_control)(void *data, uint8_t *buf, size_t size);
+   int32_t (*set_report)(void *, uint8_t, uint8_t, void *, uint32_t);
+   int32_t (*set_idle)(void *, uint8_t);
+   int32_t (*set_protocol)(void *, uint8_t);
+
 };
 
 /**
@@ -647,6 +651,7 @@ const char* config_get_hid_driver_options(void);
 const hid_driver_t *input_hid_init_first(void);
 
 const void *hid_driver_get_data(void);
+void hid_driver_reset_data(void);
 #endif
 
 /** Line complete callback.
@@ -754,7 +759,15 @@ void input_config_parse_mouse_button(void *data, const char *prefix,
 
 void input_config_set_device_name(unsigned port, const char *name);
 
+void input_config_set_device_display_name(unsigned port, const char *name);
+
+void input_config_set_device_config_name(unsigned port, const char *name);
+
 void input_config_clear_device_name(unsigned port);
+
+void input_config_clear_device_display_name(unsigned port);
+
+void input_config_clear_device_config_name(unsigned port);
 
 unsigned input_config_get_device_count();
 
@@ -765,6 +778,10 @@ unsigned input_config_get_device(unsigned port);
 void input_config_set_device(unsigned port, unsigned id);
 
 const char *input_config_get_device_name(unsigned port);
+
+const char *input_config_get_device_display_name(unsigned port);
+
+const char *input_config_get_device_config_name(unsigned port);
 
 const struct retro_keybind *input_config_get_bind_auto(unsigned port, unsigned id);
 
@@ -797,6 +814,7 @@ extern input_device_driver_t qnx_joypad;
 extern input_device_driver_t null_joypad;
 extern input_device_driver_t mfi_joypad;
 extern input_device_driver_t dos_joypad;
+extern input_device_driver_t rwebpad_joypad;
 
 extern input_driver_t input_android;
 extern input_driver_t input_sdl;
@@ -825,6 +843,7 @@ extern hid_driver_t iohidmanager_hid;
 extern hid_driver_t btstack_hid;
 extern hid_driver_t libusb_hid;
 extern hid_driver_t wiiusb_hid;
+extern hid_driver_t wiiu_hid;
 extern hid_driver_t null_hid;
 #endif
 

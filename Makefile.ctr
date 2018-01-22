@@ -46,7 +46,7 @@ ifeq ($(GRIFFIN_BUILD), 1)
 	OBJ += griffin/griffin.o
 	DEFINES += -DHAVE_GRIFFIN=1 -DHAVE_MENU -DHAVE_RGUI -DHAVE_XMB -DHAVE_MATERIALUI -DHAVE_LIBRETRODB -DHAVE_CC_RESAMPLER
 	DEFINES += -DHAVE_ZLIB -DHAVE_RPNG -DHAVE_RJPEG -DHAVE_RBMP -DHAVE_RTGA -DWANT_ZLIB
-	DEFINES += -DHAVE_NETWORKING -DHAVE_CHEEVOS -DHAVE_SOCKET_LEGACY
+	DEFINES += -DHAVE_NETWORKING -DHAVE_CHEEVOS -DHAVE_SOCKET_LEGACY -DHAVE_THREADS
 	#-DHAVE_SSL -DMBEDTLS_SSL_DEBUG_ALL
 	#ssl is currently incompatible with griffin due to use of the "static" flag on repeating functions that will conflict when included in one file
 else
@@ -69,6 +69,7 @@ else
 	HAVE_NETWORKING = 1
 	HAVE_CHEEVOS = 1
 	HAVE_SOCKET_LEGACY = 1
+	HAVE_THREADS = 1
 	HAVE_SSL = 1
 
 	include Makefile.common
@@ -125,7 +126,7 @@ endif
 
 CFLAGS += -I. -Ideps -Ideps/libz -Ideps/7zip -Ideps/stb -Ilibretro-common/include
 
-CFLAGS += -DRARCH_INTERNAL -DRARCH_CONSOLE -DSINC_LOWEST_QUALITY
+CFLAGS += -DRARCH_INTERNAL -DRARCH_CONSOLE
 CFLAGS += -DHAVE_FILTERS_BUILTIN $(DEFINES)
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
@@ -176,15 +177,28 @@ STRIP   := $(PREFIX)strip
 NM      := $(PREFIX)nm
 LD      := $(CXX)
 
-ifneq ($(findstring Linux,$(shell uname -a)),)
-	MAKEROM    = pkg/ctr/tools/makerom-linux
-	BANNERTOOL = pkg/ctr/tools/bannertool-linux
-else ifneq ($(findstring Darwin,$(shell uname -a)),)
-	MAKEROM    = pkg/ctr/tools/makerom-mac
-	BANNERTOOL = pkg/ctr/tools/bannertool-mac
+ifeq ($(strip $(CTRBANNERTOOL)),)
+	ifneq ($(findstring Linux,$(shell uname)),)
+		BANNERTOOL = pkg/ctr/tools/bannertool-linux
+	else ifneq ($(findstring Darwin,$(shell uname)),)
+		BANNERTOOL = pkg/ctr/tools/bannertool-mac
+	else
+		BANNERTOOL = pkg/ctr/tools/bannertool.exe
+	endif
 else
-	MAKEROM    = pkg/ctr/tools/makerom.exe
-	BANNERTOOL = pkg/ctr/tools/bannertool.exe
+	BANNERTOOL = $(CTRBANNERTOOL)
+endif
+
+ifeq ($(strip $(CTRMAKEROM)),)
+	ifneq ($(findstring Linux,$(shell uname)),)
+		MAKEROM    = pkg/ctr/tools/makerom-linux
+	else ifneq ($(findstring Darwin,$(shell uname)),)
+		MAKEROM    = pkg/ctr/tools/makerom-mac
+	else
+		MAKEROM    = pkg/ctr/tools/makerom.exe
+	endif
+else
+	MAKEROM = $(CTRMAKEROM)
 endif
 
 %.o: %.vsh %.gsh

@@ -21,7 +21,6 @@
 #include <lists/string_list.h>
 #include <audio/conversion/float_to_s16.h>
 #include <audio/conversion/s16_to_float.h>
-#include <audio/audio_resampler.h>
 #include <audio/dsp_filter.h>
 #include <file/file_path.h>
 #include <lists/dir_list.h>
@@ -181,6 +180,16 @@ static const retro_resampler_t *audio_driver_resampler   = NULL;
 static void *audio_driver_resampler_data                 = NULL;
 static const audio_driver_t *current_audio               = NULL;
 static void *audio_driver_context_audio_data             = NULL;
+
+enum resampler_quality audio_driver_get_resampler_quality(void)
+{
+   settings_t *settings = config_get_ptr();
+
+   if (!settings)
+      return RESAMPLER_QUALITY_DONTCARE;
+
+   return (enum resampler_quality)settings->uints.audio_resampler_quality;
+}
 
 /**
  * compute_audio_buffer_statistics:
@@ -449,6 +458,7 @@ static bool audio_driver_init_internal(bool audio_cb_inited)
             &audio_driver_resampler_data,
             &audio_driver_resampler,
             settings->arrays.audio_resampler,
+            audio_driver_get_resampler_quality(),
             audio_source_ratio_original))
    {
       RARCH_ERR("Failed to initialize resampler \"%s\".\n",
@@ -538,11 +548,8 @@ void audio_driver_set_nonblocking_state(bool enable)
  *
  * Writes audio samples to audio driver. Will first
  * perform DSP processing (if enabled) and resampling.
- *
- * Returns: true (1) if audio samples were written to the audio
- * driver, false (0) in case of an error.
  **/
-static bool audio_driver_flush(const int16_t *data, size_t samples)
+static void audio_driver_flush(const int16_t *data, size_t samples)
 {
    struct resampler_data src_data;
    bool is_perfcnt_enable                               = false;
@@ -566,10 +573,8 @@ static bool audio_driver_flush(const int16_t *data, size_t samples)
    runloop_get_status(&is_paused, &is_idle, &is_slowmotion,
          &is_perfcnt_enable);
 
-   if (is_paused)
-      return true;
-   if (!audio_driver_active || !audio_driver_input_data)
-      return false;
+   if (is_paused || !audio_driver_active || !audio_driver_input_data)
+      return;
 
    convert_s16_to_float(audio_driver_input_data, data, samples,
          audio_volume_gain);
@@ -613,20 +618,20 @@ static bool audio_driver_flush(const int16_t *data, size_t samples)
       double   direction   = (double)delta_mid / half_size;
       double   adjust      = 1.0 + audio_driver_rate_control_delta * direction;
 
-#if 0
-      RARCH_LOG_OUTPUT("[Audio]: Audio buffer is %u%% full\n",
-            (unsigned)(100 - (avail * 100) / audio_driver_buffer_size));
-#endif
-
       audio_driver_free_samples_buf
          [write_idx]               = avail;
       audio_source_ratio_current   =
          audio_source_ratio_original * adjust;
 
 #if 0
-      RARCH_LOG_OUTPUT("[Audio]: New rate: %lf, Orig rate: %lf\n",
-            audio_source_ratio_current,
-            audio_source_ratio_original);
+      if (verbosity_is_enabled())
+      {
+         RARCH_LOG_OUTPUT("[Audio]: Audio buffer is %u%% full\n",
+               (unsigned)(100 - (avail * 100) / audio_driver_buffer_size));
+         RARCH_LOG_OUTPUT("[Audio]: New rate: %lf, Orig rate: %lf\n",
+               audio_source_ratio_current,
+               audio_source_ratio_original);
+      }
 #endif
    }
 
@@ -666,12 +671,7 @@ static bool audio_driver_flush(const int16_t *data, size_t samples)
 
    if (current_audio->write(audio_driver_context_audio_data,
             output_data, output_frames * 2) < 0)
-   {
       audio_driver_active = false;
-      return false;
-   }
-
-   return true;
 }
 
 /**
@@ -862,13 +862,16 @@ bool audio_driver_find_driver(void)
       current_audio = (const audio_driver_t*)audio_driver_find_handle(i);
    else
    {
-      unsigned d;
-      RARCH_ERR("Couldn't find any audio driver named \"%s\"\n",
-            settings->arrays.audio_driver);
-      RARCH_LOG_OUTPUT("Available audio drivers are:\n");
-      for (d = 0; audio_driver_find_handle(d); d++)
-         RARCH_LOG_OUTPUT("\t%s\n", audio_driver_find_ident(d));
-      RARCH_WARN("Going to default to first audio driver...\n");
+      if (verbosity_is_enabled())
+      {
+         unsigned d;
+         RARCH_ERR("Couldn't find any audio driver named \"%s\"\n",
+               settings->arrays.audio_driver);
+         RARCH_LOG_OUTPUT("Available audio drivers are:\n");
+         for (d = 0; audio_driver_find_handle(d); d++)
+            RARCH_LOG_OUTPUT("\t%s\n", audio_driver_find_ident(d));
+         RARCH_WARN("Going to default to first audio driver...\n");
+      }
 
       current_audio = (const audio_driver_t*)audio_driver_find_handle(0);
 

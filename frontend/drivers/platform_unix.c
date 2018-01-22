@@ -974,7 +974,7 @@ static bool frontend_unix_powerstate_check_apm(
 
    if (!next_string(&ptr, &str))     /* remaining battery life time units */
       goto error;
-   else if (string_is_equal_fast(str, "min", 3))
+   else if (string_is_equal(str, "min"))
       battery_time *= 60;
 
    if (battery_flag == 0xFF) /* unknown state */
@@ -1226,6 +1226,8 @@ static void frontend_unix_get_os(char *s,
    strlcpy(s, "DragonFly BSD", len);
 #elif defined(BSD)
    strlcpy(s, "BSD", len);
+#elif defined(__HAIKU__)
+   strlcpy(s, "Haiku", len);
 #else
    strlcpy(s, "Linux", len);
 #endif
@@ -1337,7 +1339,7 @@ static void frontend_unix_get_env(int *argc,
    if (android_app->getStringExtra && jstr)
    {
       const char *argv = (*env)->GetStringUTFChars(env, jstr, 0);
-      bool used        = string_is_equal_fast(argv, "false", 5) ? false : true;
+      bool used        = string_is_equal(argv, "false") ? false : true;
 
       (*env)->ReleaseStringUTFChars(env, jstr, argv);
 

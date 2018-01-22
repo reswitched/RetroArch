@@ -16,6 +16,7 @@
  */
 
 #include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
 #include <string.h>
 
 #include <file/config_file.h>
@@ -23,6 +24,8 @@
 #include <file/file_path.h>
 #include <string/stdstring.h>
 #include <retro_timers.h>
+#include <gfx/video_frame.h>
+#include <glsym/glsym.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../../config.h"
@@ -38,14 +41,64 @@
 #include "../../defaults.h"
 #include "../../content.h"
 #include "../../retroarch.h"
+#include "../../verbosity.h"
 #include "../../command.h"
 #include "../../tasks/tasks_internal.h"
 #include "../../file_path_special.h"
 
+void RWebAudioRecalibrateTime(void);
+
+static unsigned emscripten_fullscreen_reinit;
+static unsigned emscripten_frame_count = 0;
+
+static EM_BOOL emscripten_fullscreenchange_cb(int event_type,
+   const EmscriptenFullscreenChangeEvent *fullscreen_change_event,
+   void *user_data)
+{
+   (void)event_type;
+   (void)fullscreen_change_event;
+   (void)user_data;
+
+   emscripten_fullscreen_reinit = 5;
+
+   return EM_TRUE;
+}
+
 static void emscripten_mainloop(void)
 {
+   int ret;
+   video_frame_info_t video_info;
    unsigned sleep_ms = 0;
-   int           ret = runloop_iterate(&sleep_ms);
+
+   RWebAudioRecalibrateTime();
+
+   emscripten_frame_count++;
+
+   video_driver_build_info(&video_info);
+
+   /* Disable BFI during fast forward, slow-motion,
+    * and pause to prevent flicker. */
+   if (
+         video_info.black_frame_insertion
+         && !video_info.input_driver_nonblock_state
+         && !video_info.runloop_is_slowmotion
+         && !video_info.runloop_is_paused)
+   {
+      if ((emscripten_frame_count & 1) == 0)
+      {
+         glClear(GL_COLOR_BUFFER_BIT);
+         video_info.cb_swap_buffers(video_info.context_data, &video_info);
+         return;
+      }
+   }
+
+   if (emscripten_fullscreen_reinit != 0)
+   {
+      if (--emscripten_fullscreen_reinit == 0)
+         command_event(CMD_EVENT_REINIT, NULL);
+   }
+
+   ret = runloop_iterate(&sleep_ms);
 
    if (ret == 1 && sleep_ms > 0)
       retro_sleep(sleep_ms);
@@ -56,7 +109,7 @@ static void emscripten_mainloop(void)
       return;
 
    main_exit(NULL);
-   exit(0);
+   emscripten_force_exit(0);
 }
 
 void cmd_savefiles(void)
@@ -161,18 +214,24 @@ static void frontend_emscripten_get_env(int *argc, char *argv[],
       if (!string_is_empty(dir_path))
          path_mkdir(dir_path);
    }
-
-   snprintf(g_defaults.settings.menu, sizeof(g_defaults.settings.menu), "rgui");
 }
 
 int main(int argc, char *argv[])
 {
-   settings_t *settings = config_get_ptr();
+   EMSCRIPTEN_RESULT r;
 
-   emscripten_set_canvas_size(800, 600);
+   emscripten_set_canvas_element_size("#canvas", 800, 600);
+   emscripten_set_element_css_size("#canvas", 800.0, 600.0);
+   emscripten_set_main_loop(emscripten_mainloop, 0, 0);
    rarch_main(argc, argv, NULL);
-   emscripten_set_main_loop(emscripten_mainloop,
-         settings->bools.video_vsync ? 0 : INT_MAX, 1);
+
+   r = emscripten_set_fullscreenchange_callback("#document", NULL, false,
+      emscripten_fullscreenchange_cb);
+   if (r != EMSCRIPTEN_RESULT_SUCCESS)
+   {
+      RARCH_ERR(
+         "[EMSCRIPTEN/CTX] failed to create fullscreen callback: %d\n", r);
+   }
 
    return 0;
 }

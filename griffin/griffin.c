@@ -17,11 +17,11 @@
 #define HAVE_IBXM 1
 
 #if defined(HAVE_CG) || defined(HAVE_HLSL) || defined(HAVE_GLSL)
-#define HAVE_SHADERS
+#define HAVE_SHADERS 1
 #endif
 
 #if defined(HAVE_ZLIB) || defined(HAVE_7ZIP)
-#define HAVE_COMPRESSION
+#define HAVE_COMPRESSION 1
 #endif
 
 #if _MSC_VER
@@ -345,11 +345,30 @@ VIDEO DRIVER
 
 #endif
 
+#if defined(HAVE_D3D11)
+#include "../gfx/drivers/d3d11.c"
+#include "../gfx/common/d3d11_common.c"
+#endif
+
+#if defined(HAVE_D3D12)
+#include "../gfx/drivers/d3d12.c"
+#include "../gfx/common/d3d12_common.c"
+#endif
+
+#if defined(HAVE_D3D11) || defined(HAVE_D3D12)
+#include "../gfx/common/d3dcompiler_common.c"
+#include "../gfx/common/dxgi_common.c"
+#endif
+
 #if defined(GEKKO)
 #ifdef HW_RVL
 #include "../gfx/drivers/gx_gfx_vi_encoder.c"
 #include "../memory/wii/mem2_manager.c"
 #endif
+#endif
+
+#if defined(__wiiu__)
+#include "../gfx/drivers/gx2_gfx.c"
 #endif
 
 #ifdef HAVE_SDL2
@@ -431,7 +450,7 @@ FONTS
 #include "../gfx/drivers_font_renderer/bitmapfont.c"
 #include "../gfx/font_driver.c"
 
-#if defined(HAVE_D3D9) && !defined(_XBOX)
+#if defined(HAVE_D3D9) && defined(HAVE_D3DX)
 #include "../gfx/drivers_font/d3d_w32_font.c"
 #endif
 
@@ -498,6 +517,7 @@ INPUT
 
 #ifdef HAVE_OVERLAY
 #include "../input/input_overlay.c"
+#include "../led/drivers/led_overlay.c"
 #include "../tasks/task_overlay.c"
 #endif
 
@@ -526,6 +546,9 @@ INPUT
 #elif defined(GEKKO)
 #include "../input/drivers/gx_input.c"
 #include "../input/drivers_joypad/gx_joypad.c"
+#elif defined(__wiiu__)
+#include "../input/drivers/wiiu_input.c"
+#include "../input/drivers_joypad/wiiu_joypad.c"
 #elif defined(_XBOX)
 #include "../input/drivers/xdk_xinput_input.c"
 #include "../input/drivers_joypad/xdk_joypad.c"
@@ -540,6 +563,7 @@ INPUT
 #include "../input/drivers_joypad/qnx_joypad.c"
 #elif defined(EMSCRIPTEN)
 #include "../input/drivers/rwebinput_input.c"
+#include "../input/drivers_joypad/rwebpad_joypad.c"
 #elif defined(DJGPP)
 #include "../input/drivers/dos_input.c"
 #include "../input/drivers_joypad/dos_joypad.c"
@@ -673,10 +697,10 @@ LEDS
 
 #include "../led/led_driver.c"
 
-#include "../led/null_led_driver.c"
+#include "../led/drivers/led_null.c"
 
 #if defined(HAVE_RPILED)
-#include "../led/rpi_led_driver.c"
+#include "../led/drivers/led_rpi.c"
 #endif
 
 /*============================================================
@@ -705,6 +729,8 @@ AUDIO
 #include "../audio/drivers/xenon360_audio.c"
 #elif defined(GEKKO)
 #include "../audio/drivers/gx_audio.c"
+#elif defined(__wiiu__)
+#include "../audio/drivers/wiiu_audio.c"
 #elif defined(EMSCRIPTEN)
 #include "../audio/drivers/rwebaudio.c"
 #elif defined(PSP) || defined(VITA)
@@ -881,6 +907,8 @@ FRONTEND
 #ifdef HW_RVL
 #include "../frontend/drivers/platform_wii.c"
 #endif
+#elif defined(__wiiu__)
+#include "../frontend/drivers/platform_wiiu.c"
 #elif defined(PSP) || defined(VITA)
 #include "../frontend/drivers/platform_psp.c"
 #elif defined(_3DS)
@@ -1022,7 +1050,7 @@ THREAD
 NETPLAY
 ============================================================ */
 #ifdef HAVE_NETWORKING
-#define JSON_STATIC /* must come before netplay_room_parse and jsonsax_full */
+#define JSON_STATIC 1 /* must come before netplay_room_parse and jsonsax_full */
 #include "../network/netplay/netplay_delta.c"
 #include "../network/netplay/netplay_frontend.c"
 #include "../network/netplay/netplay_handshake.c"
@@ -1037,7 +1065,7 @@ NETPLAY
 #include "../libretro-common/net/net_http.c"
 #include "../libretro-common/net/net_natt.c"
 #include "../libretro-common/formats/json/jsonsax_full.c"
-#ifndef HAVE_SOCKET_LEGACY
+#if !defined(HAVE_SOCKET_LEGACY) && !defined(__wiiu__)
 #include "../libretro-common/net/net_ifinfo.c"
 #endif
 #include "../tasks/task_http.c"
@@ -1085,15 +1113,7 @@ MENU
 #include "../menu/menu_cbs.c"
 #include "../menu/menu_content.c"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "../menu/menu_networking.c"
-
-#ifdef __cplusplus
-}
-#endif
 
 #include "../menu/widgets/menu_entry.c"
 #include "../menu/widgets/menu_filebrowser.c"
@@ -1171,7 +1191,7 @@ extern "C" {
 #include "../menu/drivers/rgui.c"
 #endif
 
-#if defined(HAVE_OPENGL) || defined(HAVE_VITA2D) || defined(_3DS) || defined(_MSC_VER)
+#if defined(HAVE_OPENGL) || defined(HAVE_VITA2D) || defined(_3DS) || defined(_MSC_VER) || defined(__wiiu__)
 #ifdef HAVE_XMB
 #include "../menu/drivers/xmb.c"
 #endif
@@ -1203,10 +1223,6 @@ extern "C" {
 #endif
 
 #include "../command.c"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #if defined(HAVE_NETWORKING)
 #include "../libretro-common/net/net_http_parse.c"
@@ -1282,7 +1298,7 @@ XML
 ============================================================ */
 #if 0
 #ifndef HAVE_LIBXML2
-#define RXML_LIBXML2_COMPAT
+#define RXML_LIBXML2_COMPAT 1
 #include "../libretro-common/formats/xml/rxml.c"
 #endif
 #endif
@@ -1329,8 +1345,4 @@ HTTP SERVER
 #if defined(HAVE_HTTPSERVER) && defined(HAVE_ZLIB)
 #include "../deps/civetweb/civetweb.c"
 #include "network/httpserver/httpserver.c"
-#endif
-
-#ifdef __cplusplus
-}
 #endif

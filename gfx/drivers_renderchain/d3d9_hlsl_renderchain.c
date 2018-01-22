@@ -42,24 +42,20 @@ typedef struct hlsl_d3d9_renderchain
 } hlsl_d3d9_renderchain_t;
 
 /* TODO/FIXME - this forward declaration should not be necesary */
-void hlsl_set_proj_matrix(void *data, XMMATRIX rotation_value);
+void hlsl_set_proj_matrix(void *data, void *matrix_data);
 
 static void hlsl_d3d9_renderchain_set_mvp(
+      void *data,
       void *chain_data,
-      void *data, unsigned vp_width,
-      unsigned vp_height, unsigned rotation)
+      void *shader_data,
+      const void *mat_data)
 {
-   video_shader_ctx_mvp_t mvp;
    d3d_video_t      *d3d = (d3d_video_t*)data;
-   LPDIRECT3DDEVICE d3dr = (LPDIRECT3DDEVICE)d3d->dev;
 
-   hlsl_set_proj_matrix((void*)&d3d->shader,
-         XMMatrixRotationZ(rotation * (M_PI / 2.0)));
-
-   mvp.data   = d3d;
-   mvp.matrix = NULL;
-
-   video_driver_set_mvp(&mvp);
+   if(shader_data)
+      hlsl_set_proj_matrix(shader_data, mat_data);
+   else
+      hlsl_set_proj_matrix((void*)&d3d->shader, mat_data);
 }
 
 static void hlsl_d3d9_renderchain_clear(void *data)
@@ -108,12 +104,9 @@ static bool hlsl_d3d9_renderchain_create_first_pass(void *data,
 
    chain->tex = d3d_texture_new(d3dr, NULL,
          chain->tex_w, chain->tex_h, 1, 0,
-#ifdef _XBOX
-         info->rgb32 ? D3DFMT_LIN_X8R8G8B8 : D3DFMT_LIN_R5G6B5,
-#else
-         info->rgb32 ? D3DFMT_X8R8G8B8 : D3DFMT_R5G6B5,
-#endif
-         0, 0, 0, 0, NULL, NULL);
+         info->rgb32 ? 
+         d3d_get_xrgb8888_format() : d3d_get_rgb565_format(),
+         0, 0, 0, 0, NULL, NULL, false);
 
    if (!chain->tex)
       return false;
@@ -149,15 +142,15 @@ static void hlsl_d3d9_renderchain_set_vertices(
    {
       unsigned i;
       Vertex vert[4];
+	  float tex_w      = 0.0f;
+	  float tex_h      = 0.0f;
       void *verts      = NULL;
 
       chain->last_width  = vert_width;
       chain->last_height = vert_height;
 
-      float tex_w        = vert_width;
-      float tex_h        = vert_height;
-      tex_w             /= ((float)chain->tex_w);
-      tex_h             /= ((float)chain->tex_h);
+      tex_w              = vert_width  / ((float)chain->tex_w);
+      tex_h              = vert_height / ((float)chain->tex_h);
 
       vert[0].x          = -1.0f;
       vert[0].y          = -1.0f;
@@ -237,8 +230,13 @@ static void hlsl_d3d9_renderchain_blit_to_texture(
 
    /* Set the texture to NULL so D3D doesn't complain about it being in use... */
    d3d_set_texture(d3dr, 0, NULL);
-   d3d_texture_blit(chain->pixel_size, chain->tex,
-         &d3dlr, frame, width, height, pitch);
+
+   if (d3d_lock_rectangle(chain->tex, 0, &d3dlr, NULL, 0, 0))
+   {
+      d3d_texture_blit(chain->pixel_size, chain->tex,
+            &d3dlr, frame, width, height, pitch);
+      d3d_unlock_rectangle(chain->tex);
+   }
 }
 
 static void hlsl_d3d9_renderchain_deinit(void *data)
@@ -313,7 +311,7 @@ static bool hlsl_d3d9_renderchain_init(void *data,
    d3d_video_t *d3d                   = (d3d_video_t*)data;
    LPDIRECT3DDEVICE d3dr              = (LPDIRECT3DDEVICE)d3d->dev;
    const video_info_t *video_info     = (const video_info_t*)_video_info;
-   const LinkInfo *link_info          = (const LinkInfo*)info_data;
+   const struct LinkInfo *link_info   = (const struct LinkInfo*)info_data;
    hlsl_d3d9_renderchain_t *chain     = (hlsl_d3d9_renderchain_t*)
       d3d->renderchain_data;
    unsigned fmt                       = (rgb32)

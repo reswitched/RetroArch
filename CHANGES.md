@@ -1,20 +1,47 @@
 # 1.7.1 (future)
 - 3DS: Now correctly reports amount of CPU cores.
+- 3DS: Frontend rating is now correctly implemented for both New 3DS/2DS and Old 3DS/2DS.
 - 3DS: Initial networking support, HTTP requests won't work yet.
-- CHEEVOS: Fix unofficial achievements not being loaded
+- 3DS: Now reports memory and battery state.
+- AUDIO: Added 'Audio Resampler Quality' setting to Audio Settings. Setting this higher will increase sound quality at the expense of sound latency and/or performance. Setting this value lower will improve sound latency/performance at the expense of sound quality. Only has an effect if the Sinc resampler is used, and you have to restart the game for changes to take effect.
+- CHEEVOS: Fix unofficial achievements not being loaded.
+- CHEEVOS: Show savestate menu entries when no achievements are found even if hardcore mode is enabled.
 - CHEEVOS: Support Neo Geo Pocket.
+- COMMON: Bugfix for issue related to 'Windows mouse pointer visible when running MESS or MAME cores'.
+- COMMON: Fix bug 'Last item in a Playlist is ignored'.
 - COMMON: New LED API. Driver implemented for Raspberry Pi, proof of concept implemented for core MAME 2003.
+- D3D8: Direct3D 8 can now work on systems that have Direct3D 8 installed.
+- D3D9: Add menu support for MaterialUI/XMB.
+- D3D11: Initial video driver implementation.
+- D3D12: Initial video driver implementation.
 - DINPUT: don't reinitialize input driver on network events / media insertion / network drive connection
+- INPUT: show friendly names when available under input binds and system information
+- INPUT: show the config name when available under system information
 - GUI: Allow changing menu font color.
+- GUI: Menu visibility options for RGUI and MaterialUI.
 - GUI/XMB: Add Monochrome Inverted icon theme.
 - GUI/XMB: Allow changing menu scale to 200%.
+- HAIKU: Restored port.
 - KEYMAPPER: prevent a condition that caused input_menu_toggle to stop working when a RETRO_DEVICE_KEYBOARD type device is enabled
+- GL: ignore hard gpu sync when fast-forwarding
 - LOCALIZATION: Update Italian translation.
-- NSW: Initial Nintendo Switch port, based on libtransistor SDK.
+- LOCALIZATION: Update Japanese translation.
+- LOCALIZATION: Update Spanish translation.
+- SOLARIS: Initial port.
+- SWITCH: Initial Nintendo Switch port, based on libtransistor SDK.
 - PS3: Enable Cheevos.
 - PSP: Enable threading support through pthreads.
-- WINDOWS: Improved Unicode support (for cores/directory creation).
+- SHIELD ATV: Allow the remote / gamepad takeover hack to work with the 2017 gamepad
+- VULKAN: Fix swapchain recreation bug on Nvidia GPUs with Windows 10 through workaround (will be properly resolved in a future driver version).
+- WINDOWS: Improved Unicode support (for cores/directory creation and 7zip archives).
+- WINDOWS: Show progress meter on taskbar for downloads (Windows 7 and up).
+- WINDOWS: WS_EX_LAYERED drastically decreases performance, so only set it when needed (transparency in windowed mode).
 - WIIU: Overlay support.
+- WIIU: Transparency support in menu + overlays.
+- WIIU: Increased stability during core switching.
+- WIIU: Shader support.
+- WIIU: Menu shader effects added (shaders).
+- XBOX OG: Restored port.
 
 # 1.7.0
 - CHEEVOS: Add badges for achievements, shows thumbnail images of achievements.

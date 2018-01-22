@@ -184,7 +184,7 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate)
       goto error;
    }
 
-   if (sample_rate != chunk->rwav->samplerate)
+   if (sample_rate != (int)chunk->rwav->samplerate)
    {
       chunk->resample = true;
       chunk->ratio = (double)sample_rate / chunk->rwav->samplerate;
@@ -192,6 +192,7 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate)
       retro_resampler_realloc(&chunk->resampler_data,
             &chunk->resampler,
             NULL,
+            RESAMPLER_QUALITY_DONTCARE,
             chunk->ratio);
 
       if (chunk->resampler && chunk->resampler_data)

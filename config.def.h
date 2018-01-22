@@ -19,6 +19,7 @@
 #define __CONFIG_DEF_H
 
 #include <boolean.h>
+#include <audio/audio_resampler.h>
 #include "gfx/video_defines.h"
 #include "input/input_driver.h"
 
@@ -68,7 +69,7 @@ static const bool def_playlist_entry_rename = true;
 
 static const unsigned int def_user_language = 0;
 
-#if (defined(_WIN32) && !defined(_XBOX)) || (defined(__linux) && !defined(ANDROID) && !defined(HAVE_LAKKA)) || (defined(__MACH__) && !defined(IOS))
+#if (defined(_WIN32) && !defined(_XBOX)) || (defined(__linux) && !defined(ANDROID) && !defined(HAVE_LAKKA)) || (defined(__MACH__) && !defined(IOS)) || defined(EMSCRIPTEN)
 static const bool def_mouse_enable = true;
 #else
 static const bool def_mouse_enable = false;
@@ -169,7 +170,7 @@ static unsigned swap_interval = 1;
 static const bool video_threaded = false;
 
 #if defined(HAVE_THREADS)
-#if defined(GEKKO) || defined(PSP) || defined(_3DS) || defined(_XBOX1)
+#if defined(GEKKO) || defined(PSP) || defined(_3DS)
 /* For single-core consoles right now it's better to have this be disabled. */
 static const bool threaded_data_runloop_enable = false;
 #else
@@ -263,11 +264,27 @@ static bool menu_show_configurations     = true;
 static bool menu_show_help               = true;
 static bool menu_show_quit_retroarch     = true;
 static bool menu_show_reboot             = true;
-
 #if defined(HAVE_LAKKA) || defined(VITA) || defined(_3DS)
 static bool menu_show_core_updater       = false;
 #else
 static bool menu_show_core_updater       = true;
+#endif
+
+static bool content_show_settings    = true;
+static bool content_show_favorites   = true;
+#ifdef HAVE_IMAGEVIEWER
+static bool content_show_images      = true;
+#endif
+static bool content_show_music       = true;
+#ifdef HAVE_FFMPEG
+static bool content_show_video       = true;
+#endif
+#ifdef HAVE_NETWORKING
+static bool content_show_netplay     = true;
+#endif
+static bool content_show_history     = true;
+#ifdef HAVE_LIBRETRODB
+static bool content_show_add     	 = true;
 #endif
 
 #ifdef HAVE_XMB
@@ -282,22 +299,6 @@ static unsigned xmb_theme        = XMB_THEME_ELECTRIC_BLUE;
 static bool xmb_shadows_enable   = false;
 #else
 static bool xmb_shadows_enable   = true;
-#endif
-static bool xmb_show_settings    = true;
-static bool xmb_show_favorites   = true;
-#ifdef HAVE_IMAGEVIEWER
-static bool xmb_show_images      = true;
-#endif
-static bool xmb_show_music       = true;
-#ifdef HAVE_FFMPEG
-static bool xmb_show_video       = true;
-#endif
-#ifdef HAVE_NETWORKING
-static bool xmb_show_netplay     = true;
-#endif
-static bool xmb_show_history     = true;
-#ifdef HAVE_LIBRETRODB
-static bool xmb_show_add     	 = true;
 #endif
 #endif
 
@@ -637,6 +638,14 @@ static const bool ui_companion_start_on_boot = true;
 
 static const bool ui_companion_enable = false;
 
+#if defined(__QNX__) || defined(_XBOX1) || defined(_XBOX360) || defined(__CELLOS_LV2__) || (defined(__MACH__) && defined(IOS)) || defined(ANDROID) || defined(WIIU) || defined(HAVE_NEON) || defined(GEKKO) || defined(__ARM_NEON__)
+static enum resampler_quality audio_resampler_quality_level = RESAMPLER_QUALITY_LOWER;
+#elif defined(PSP) || defined(_3DS) || defined(VITA)
+static enum resampler_quality audio_resampler_quality_level = RESAMPLER_QUALITY_LOWEST;
+#else
+static enum resampler_quality audio_resampler_quality_level = RESAMPLER_QUALITY_NORMAL;
+#endif
+
 #if defined(ANDROID)
 #if defined(ANDROID_ARM)
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/android/latest/armeabi-v7a/";
@@ -661,7 +670,7 @@ static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/apple/
 #endif
 #elif defined(_WIN32) && !defined(_XBOX)
 #if _MSC_VER == 1600
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_M_X64)
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/windows-msvc2010/x86_64/latest/";
 #elif defined(__i386__) || defined(__i486__) || defined(__i686__) || defined(_M_IX86) || defined(_M_IA64)
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/windows-msvc2010/x86/latest/";
@@ -671,7 +680,7 @@ static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/window
 #elif _MSC_VER == 1310
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/windows-msvc2003/x86/latest/";
 #else
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(_M_X64)
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/windows/x86_64/latest/";
 #elif defined(__i386__) || defined(__i486__) || defined(__i686__) || defined(_M_IX86) || defined(_M_IA64)
 static char buildbot_server_url[] = "http://buildbot.libretro.com/nightly/windows/x86/latest/";

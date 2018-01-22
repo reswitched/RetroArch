@@ -467,10 +467,6 @@ typedef struct video_frame_info
    bool (*cb_set_resize)(void*, unsigned, unsigned);
 
    void (*cb_shader_use)(void *data, void *shader_data, unsigned index, bool set_active);
-#if 0
-   bool (*cb_set_coords)(void *handle_data,
-         void *shader_data, const struct video_coords *coords);
-#endif
    bool (*cb_set_mvp)(void *data, void *shader_data,
          const void *mat_data);
 
@@ -698,11 +694,9 @@ typedef struct video_poke_interface
    void (*set_aspect_ratio)(void *data, unsigned aspectratio_index);
    void (*apply_state_changes)(void *data);
 
-#ifdef HAVE_MENU
    /* Update texture. */
    void (*set_texture_frame)(void *data, const void *frame, bool rgb32,
          unsigned width, unsigned height, float alpha);
-#endif
    /* Enable or disable rendering. */
    void (*set_texture_enable)(void *data, bool enable, bool full_screen);
    void (*set_osd_msg)(void *data, video_frame_info_t *video_info,
@@ -804,9 +798,10 @@ typedef struct video_driver
 
 typedef struct d3d_renderchain_driver
 {
-   void (*set_mvp)(void *chain_data,
-         void *data, unsigned vp_width,
-         unsigned vp_height, unsigned rotation);
+   void (*set_mvp)(void *data,
+         void *chain_data,
+         void *shader_data,
+         const void *mat_data);
    void (*chain_free)(void *data);
    void *(*chain_new)(void);
    bool (*reinit)(void *data, const void *info_data);
@@ -1341,6 +1336,8 @@ extern video_driver_t video_vita2d;
 extern video_driver_t video_ctr;
 extern video_driver_t video_switch;
 extern video_driver_t video_d3d;
+extern video_driver_t video_d3d11;
+extern video_driver_t video_d3d12;
 extern video_driver_t video_gx;
 extern video_driver_t video_wiiu;
 extern video_driver_t video_xenon360;
@@ -1387,7 +1384,7 @@ extern const shader_backend_t hlsl_backend;
 extern const shader_backend_t gl_cg_backend;
 extern const shader_backend_t shader_null_backend;
 
-extern d3d_renderchain_driver_t d3d8_renderchain;
+extern d3d_renderchain_driver_t d3d8_d3d_renderchain;
 extern d3d_renderchain_driver_t cg_d3d9_renderchain;
 extern d3d_renderchain_driver_t hlsl_d3d9_renderchain;
 extern d3d_renderchain_driver_t null_d3d_renderchain;

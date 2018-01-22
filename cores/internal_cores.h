@@ -20,10 +20,14 @@
 
 #include <boolean.h>
 #include <libretro.h>
+#include <retro_common_api.h>
+#include <retro_environment.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
+
+RETRO_BEGIN_DECLS
 
 void libretro_dummy_retro_init(void);
 
@@ -299,5 +303,7 @@ void *libretro_videoprocessor_retro_get_memory_data(unsigned id);
 size_t libretro_videoprocessor_retro_get_memory_size(unsigned id);
 
 #endif
+
+RETRO_END_DECLS
 
 #endif

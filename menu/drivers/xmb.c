@@ -36,9 +36,7 @@
 #include "../../config.h"
 #endif
 
-#ifndef HAVE_DYNAMIC
 #include "../../frontend/frontend_driver.h"
-#endif
 
 #include "menu_generic.h"
 
@@ -1070,9 +1068,9 @@ static void xmb_update_savestate_thumbnail_path(void *data, unsigned i)
    if (!string_is_empty(entry.label))
    {
       if (     (settings->bools.savestate_thumbnail_enable)
-            && ((string_is_equal_fast(entry.label, "state_slot", 10))
-               || (string_is_equal_fast(entry.label, "loadstate", 9))
-               || (string_is_equal_fast(entry.label, "savestate", 9))))
+            && ((string_is_equal(entry.label, "state_slot"))
+               || (string_is_equal(entry.label, "loadstate"))
+               || (string_is_equal(entry.label, "savestate"))))
       {
          size_t path_size         = 8024 * sizeof(char);
          char             *path   = (char*)malloc(8204 * sizeof(char));
@@ -2117,38 +2115,6 @@ static uintptr_t xmb_icon_get_id(xmb_handle_t *xmb,
 {
    switch (enum_idx)
    {
-      case MENU_ENUM_LABEL_RETRO_ACHIEVEMENTS_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_ACHIEVEMENT_LIST];
-      case MENU_ENUM_LABEL_CONTENT_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_CORE];
-      case MENU_ENUM_LABEL_PLAYLIST_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_RDB];
-      case MENU_ENUM_LABEL_NETWORK_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_WIFI];
-      case MENU_ENUM_LABEL_CORE_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_CORE];
-      case MENU_ENUM_LABEL_DIRECTORY_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_FOLDER];
-      case MENU_ENUM_LABEL_SAVING_SETTINGS:
-         return xmb->textures.list[XMB_TEXTURE_SAVESTATE];
-      case MENU_ENUM_LABEL_SCAN_FILE:
-         return xmb->textures.list[XMB_TEXTURE_FILE];
-      case MENU_ENUM_LABEL_SCAN_DIRECTORY:
-         return xmb->textures.list[XMB_TEXTURE_FOLDER];
-      case MENU_ENUM_LABEL_CONTENT_COLLECTION_LIST:
-         return xmb->textures.list[XMB_TEXTURE_RDB];
-      case MENU_ENUM_LABEL_QUIT_RETROARCH:
-         return xmb->textures.list[XMB_TEXTURE_CLOSE];
-      case MENU_ENUM_LABEL_HELP_LIST:
-         return xmb->textures.list[XMB_TEXTURE_CORE_INFO];
-      case MENU_ENUM_LABEL_INFORMATION_LIST:
-         return xmb->textures.list[XMB_TEXTURE_CORE_OPTIONS];
-      case MENU_ENUM_LABEL_ONLINE_UPDATER:
-         return xmb->textures.list[XMB_TEXTURE_WIFI];
-      case MENU_ENUM_LABEL_CORE_LIST:
-         return xmb->textures.list[XMB_TEXTURE_CORE];
-      case MENU_ENUM_LABEL_LOAD_CONTENT_LIST:
-         return xmb->textures.list[XMB_TEXTURE_FILE];
       case MENU_ENUM_LABEL_CORE_OPTIONS:
       case MENU_ENUM_LABEL_NAVIGATION_BROWSER_FILTER_SUPPORTED_EXTENSIONS_ENABLE:
          return xmb->textures.list[XMB_TEXTURE_CORE_OPTIONS];
@@ -2740,7 +2706,7 @@ static void xmb_render(void *data, bool is_idle)
 
 static bool xmb_shader_pipeline_active(video_frame_info_t *video_info)
 {
-   if (string_is_not_equal_fast(menu_driver_ident(), "xmb", 3))
+   if (string_is_not_equal(menu_driver_ident(), "xmb"))
       return false;
    if (video_info->menu_shader_pipeline == XMB_SHADER_PIPELINE_WALLPAPER)
       return false;
@@ -3541,28 +3507,28 @@ static void *xmb_init(void **userdata, bool video_is_threaded)
 
    xmb->system_tab_end                = 0;
    xmb->tabs[xmb->system_tab_end]     = XMB_SYSTEM_TAB_MAIN;
-   if (settings->bools.menu_xmb_show_settings && !settings->bools.kiosk_mode_enable)
+   if (settings->bools.menu_content_show_settings && !settings->bools.kiosk_mode_enable)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_SETTINGS;
-   if (settings->bools.menu_xmb_show_favorites)
+   if (settings->bools.menu_content_show_favorites)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_FAVORITES;
-   if (settings->bools.menu_xmb_show_history)
+   if (settings->bools.menu_content_show_history)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_HISTORY;
 #ifdef HAVE_IMAGEVIEWER
-   if (settings->bools.menu_xmb_show_images)
+   if (settings->bools.menu_content_show_images)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_IMAGES;
 #endif
-   if (settings->bools.menu_xmb_show_music)
+   if (settings->bools.menu_content_show_music)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_MUSIC;
 #ifdef HAVE_FFMPEG
-   if (settings->bools.menu_xmb_show_video)
+   if (settings->bools.menu_content_show_video)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_VIDEO;
 #endif
 #ifdef HAVE_NETWORKING
-   if (settings->bools.menu_xmb_show_netplay)
+   if (settings->bools.menu_content_show_netplay)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_NETPLAY;
 #endif
 #ifdef HAVE_LIBRETRODB
-   if (settings->bools.menu_xmb_show_add && !settings->bools.kiosk_mode_enable)
+   if (settings->bools.menu_content_show_add && !settings->bools.kiosk_mode_enable)
       xmb->tabs[++xmb->system_tab_end] = XMB_SYSTEM_TAB_ADD;
 #endif
 
@@ -4429,7 +4395,7 @@ static int xmb_list_push(void *data, void *userdata,
                }
             }
 #endif
-            if (!settings->bools.menu_xmb_show_settings && !string_is_empty(settings->paths.menu_xmb_show_settings_password))
+            if (!settings->bools.menu_content_show_settings && !string_is_empty(settings->paths.menu_content_show_settings_password))
             {
                entry.enum_idx      = MENU_ENUM_LABEL_XMB_MAIN_MENU_ENABLE_SETTINGS;
                menu_displaylist_ctl(DISPLAYLIST_SETTING_ENUM, &entry);

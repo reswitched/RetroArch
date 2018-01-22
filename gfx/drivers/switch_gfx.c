@@ -163,6 +163,7 @@ static bool switch_frame(void *data, const void *frame,
    {
       for(y = 0; y < height; y++)
       {
+         unsigned subx, suby;
          uint32_t pixel = 0;
 
          if (sw->rgb32)
@@ -171,7 +172,6 @@ static bool switch_frame(void *data, const void *frame,
             pixel = frame_pixels[(y*pitch/sizeof(uint32_t)) + x];
          } else {
             const uint16_t *frame_pixels = frame;
-            unsigned subx, suby;
             uint32_t spixel = frame_pixels[(y*pitch/sizeof(uint16_t)) + x];
             uint8_t r       = (spixel >> 11) & 31;
             uint8_t g       = (spixel >> 5) & 63;
@@ -182,8 +182,8 @@ static bool switch_frame(void *data, const void *frame,
             pixel           = (r << 0) | (g << 8) | (b << 16) | (0xFF << 24);
          }
 
-         for (int subx = 0; subx < xsf; subx++)
-            for (int suby = 0; suby < ysf; suby++)
+         for (subx = 0; subx < xsf; subx++)
+            for (suby = 0; suby < ysf; suby++)
                image[(((y*sf)+suby+centery)*1280) 
                   + ((x*sf)+subx+centerx)] = pixel;
       }
@@ -315,56 +315,58 @@ static bool switch_read_viewport(void *data, uint8_t *buffer, bool is_idle)
    return true;
 }
 
-#if defined(HAVE_MENU)
-static void switch_set_texture_frame(void *data, const void *frame, bool rgb32,
-                                     unsigned width, unsigned height, float alpha)
+static void switch_set_texture_frame(
+      void *data, const void *frame, bool rgb32,
+      unsigned width, unsigned height, float alpha)
 {
+   switch_video_t *sw = data;
 
-	switch_video_t *sw = data;
-	if(sw->menu_texture.pixels == NULL || sw->menu_texture.width != width || sw->menu_texture.height != height) {
-		if(sw->menu_texture.pixels != NULL) {
-			free(sw->menu_texture.pixels);
-		}
+   if (  sw->menu_texture.pixels == NULL || 
+         sw->menu_texture.width != width ||
+         sw->menu_texture.height != height)
+   {
+      if(sw->menu_texture.pixels != NULL)
+         free(sw->menu_texture.pixels);
 
-		sw->menu_texture.pixels = malloc(width * height * 4);
-		if(sw->menu_texture.pixels == NULL) {
-			RARCH_ERR("failed to allocate buffer for menu texture\n");
-			return;
-		}
+      sw->menu_texture.pixels = malloc(width * height * 4);
+      if(sw->menu_texture.pixels == NULL)
+      {
+         RARCH_ERR("failed to allocate buffer for menu texture\n");
+         return;
+      }
 
-		sw->menu_texture.width = width;
-		sw->menu_texture.height = height;
-		
-		struct scaler_ctx *sctx = &sw->menu_texture.scaler;
-		scaler_ctx_gen_reset(sctx);
-		
-		sctx->in_width = width;
-		sctx->in_height = height;
-		sctx->in_stride = width * 4;
-		sctx->in_fmt = SCALER_FMT_ARGB8888;
-		
-		sctx->out_width = 1280;
-		sctx->out_height = 720;
-		sctx->out_stride = 1280 * 4;
-		sctx->out_fmt = SCALER_FMT_ARGB8888;
-		
-		sctx->scaler_type = SCALER_TYPE_POINT;
-		
-		if(!scaler_ctx_gen_filter(sctx)) {
-			RARCH_ERR("failed to generate scaler for menu texture\n");
-			return;
-		}
-	}
-	
-	if(rgb32) {
-		memcpy(sw->menu_texture.pixels, frame, width * height * 4);
-	} else {
-		conv_rgb565_argb8888(sw->menu_texture.pixels, frame,
-		                     width, height,
-		                     width * sizeof(uint32_t), width * sizeof(uint16_t));
-	}
+      sw->menu_texture.width = width;
+      sw->menu_texture.height = height;
+
+      struct scaler_ctx *sctx = &sw->menu_texture.scaler;
+      scaler_ctx_gen_reset(sctx);
+
+      sctx->in_width = width;
+      sctx->in_height = height;
+      sctx->in_stride = width * 4;
+      sctx->in_fmt = SCALER_FMT_ARGB8888;
+
+      sctx->out_width = 1280;
+      sctx->out_height = 720;
+      sctx->out_stride = 1280 * 4;
+      sctx->out_fmt = SCALER_FMT_ARGB8888;
+
+      sctx->scaler_type = SCALER_TYPE_POINT;
+
+      if(!scaler_ctx_gen_filter(sctx))
+      {
+         RARCH_ERR("failed to generate scaler for menu texture\n");
+         return;
+      }
+   }
+
+   if(rgb32)
+      memcpy(sw->menu_texture.pixels, frame, width * height * 4);
+   else
+      conv_rgb565_argb8888(sw->menu_texture.pixels, frame,
+            width, height,
+            width * sizeof(uint32_t), width * sizeof(uint16_t));
 }
-#endif
 
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 {
@@ -387,10 +389,8 @@ static const video_poke_interface_t switch_poke_interface = {
 	NULL, /* get_proc_address */
 	NULL, /* set_aspect_ratio */
 	NULL, /* apply_state_changes */
-#if defined(HAVE_MENU)
-	switch_set_texture_frame, /* set_texture_frame */
-#endif
-	switch_set_texture_enable, /* set_texture_enable */
+	switch_set_texture_frame,
+	switch_set_texture_enable,
 	NULL, /* set_osd_msg */
 	NULL, /* show_mouse */
 	NULL, /* grab_mouse_toggle */

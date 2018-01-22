@@ -672,8 +672,8 @@ static void sdl2_poke_apply_state_changes(void *data)
    vid->should_resize = true;
 }
 
-#ifdef HAVE_MENU
-static void sdl2_poke_set_texture_frame(void *data, const void *frame, bool rgb32,
+static void sdl2_poke_set_texture_frame(void *data,
+      const void *frame, bool rgb32,
       unsigned width, unsigned height, float alpha)
 {
    if (frame)
@@ -687,11 +687,13 @@ static void sdl2_poke_set_texture_frame(void *data, const void *frame, bool rgb3
    }
 }
 
-static void sdl2_poke_texture_enable(void *data, bool enable, bool full_screen)
+static void sdl2_poke_texture_enable(void *data,
+      bool enable, bool full_screen)
 {
-   sdl2_video_t *vid = (sdl2_video_t*)data;
+   sdl2_video_t *vid   = (sdl2_video_t*)data;
 
-   vid->menu.active = enable;
+   if (vid)
+      vid->menu.active = enable;
 }
 
 static void sdl2_poke_set_osd_msg(void *data,
@@ -704,6 +706,7 @@ static void sdl2_poke_set_osd_msg(void *data,
    RARCH_LOG("[SDL2]: OSD MSG: %s\n", msg);
 }
 
+#ifdef HAVE_MENU
 static void sdl2_show_mouse(void *data, bool state)
 {
    (void)data;
@@ -731,16 +734,13 @@ static video_poke_interface_t sdl2_video_poke_interface = {
    NULL, /* get_proc_address */
    sdl2_poke_set_aspect_ratio,
    sdl2_poke_apply_state_changes,
-#ifdef HAVE_MENU
    sdl2_poke_set_texture_frame,
    sdl2_poke_texture_enable,
    sdl2_poke_set_osd_msg,
+#ifdef HAVE_MENU
    sdl2_show_mouse,
    sdl2_grab_mouse_toggle,
 #else
-   NULL,
-   NULL,
-   NULL,
    NULL,
    NULL,
 #endif

@@ -116,7 +116,7 @@ static void task_screenshot_handler(retro_task_t *task)
 #if defined(_XBOX1)
    if (XGWriteSurfaceToFile(state->surf, state->filename) == S_OK)
       ret = true;
-   state->surf->Release();
+   d3d_surface_free(state->surf);
 #elif defined(HAVE_RPNG)
    if (state->bgr24)
       scaler->in_fmt   = SCALER_FMT_BGR24;
@@ -241,7 +241,8 @@ static bool screenshot_dump(
    }
 
 #ifdef _XBOX1
-   d3d->dev->GetBackBuffer(-1, D3DBACKBUFFER_TYPE_MONO, &state->surf);
+   d3d_device_get_backbuffer(d3d->dev, -1, 0, D3DBACKBUFFER_TYPE_MONO,
+      &state->surf);
 #elif defined(HAVE_RPNG)
    buf = (uint8_t*)malloc(width * height * 3);
    if (!buf)

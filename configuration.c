@@ -132,6 +132,8 @@ enum video_driver_enum
    VIDEO_CTR,
    VIDEO_SWITCH,
    VIDEO_D3D9,
+   VIDEO_D3D11,
+   VIDEO_D3D12,
    VIDEO_VG,
    VIDEO_OMAP,
    VIDEO_EXYNOS,
@@ -224,6 +226,7 @@ enum joypad_driver_enum
    JOYPAD_DOS,
    JOYPAD_HID,
    JOYPAD_QNX,
+   JOYPAD_RWEBPAD,
    JOYPAD_NULL
 };
 
@@ -454,6 +457,8 @@ static enum joypad_driver_enum JOYPAD_DEFAULT_DRIVER = JOYPAD_DOS;
 static enum joypad_driver_enum JOYPAD_DEFAULT_DRIVER = JOYPAD_HID;
 #elif defined(__QNX__)
 static enum joypad_driver_enum JOYPAD_DEFAULT_DRIVER = JOYPAD_QNX;
+#elif defined(EMSCRIPTEN)
+static enum joypad_driver_enum JOYPAD_DEFAULT_DRIVER = JOYPAD_RWEBPAD;
 #else
 static enum joypad_driver_enum JOYPAD_DEFAULT_DRIVER = JOYPAD_NULL;
 #endif
@@ -488,7 +493,7 @@ static enum location_driver_enum LOCATION_DEFAULT_DRIVER = LOCATION_NULL;
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_XUI;
 #elif defined(HAVE_MATERIALUI) && defined(RARCH_MOBILE)
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_MATERIALUI;
-#elif defined(HAVE_XMB)
+#elif defined(HAVE_XMB) && !defined(_XBOX)
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_XMB;
 #elif defined(HAVE_RGUI)
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_RGUI;
@@ -692,6 +697,10 @@ const char *config_get_default_video(void)
       case VIDEO_XDK_D3D:
       case VIDEO_D3D9:
          return "d3d";
+      case VIDEO_D3D11:
+         return "d3d11";
+      case VIDEO_D3D12:
+         return "d3d12";
       case VIDEO_PSP1:
          return "psp1";
       case VIDEO_VITA2D:
@@ -783,9 +792,9 @@ const char *config_get_default_input(void)
       case INPUT_COCOA:
          return "cocoa";
       case INPUT_QNX:
-      	 return "qnx_input";
+          return "qnx_input";
       case INPUT_RWEBINPUT:
-      	 return "rwebinput";
+          return "rwebinput";
       case INPUT_DOS:
          return "dos";
       case INPUT_NULL:
@@ -846,6 +855,8 @@ const char *config_get_default_joypad(void)
          return "hid";
       case JOYPAD_QNX:
          return "qnx";
+      case JOYPAD_RWEBPAD:
+         return "rwebpad";
       case JOYPAD_DOS:
          return "dos";
       case JOYPAD_NULL:
@@ -1030,8 +1041,8 @@ static struct config_path_setting *populate_settings_path(settings_t *settings, 
    /* Paths */
 #ifdef HAVE_XMB
    SETTING_PATH("xmb_font",                   settings->paths.path_menu_xmb_font, false, NULL, true);
-   SETTING_PATH("xmb_show_settings_password", settings->paths.menu_xmb_show_settings_password, false, NULL, true);
 #endif
+   SETTING_PATH("content_show_settings_password", settings->paths.menu_content_show_settings_password, false, NULL, true);
    SETTING_PATH("kiosk_mode_password",        settings->paths.kiosk_mode_password, false, NULL, true);
    SETTING_PATH("netplay_nickname",           settings->paths.username, false, NULL, true);
    SETTING_PATH("video_filter",               settings->paths.path_softfilter_plugin, false, NULL, true);
@@ -1247,17 +1258,22 @@ static struct config_bool_setting *populate_settings_bool(settings_t *settings, 
    SETTING_BOOL("quick_menu_show_save_game_overrides",  &settings->bools.quick_menu_show_save_game_overrides, true, quick_menu_show_save_game_overrides, false);
    SETTING_BOOL("quick_menu_show_information",   &settings->bools.quick_menu_show_information, true, quick_menu_show_information, false);
    SETTING_BOOL("kiosk_mode_enable",             &settings->bools.kiosk_mode_enable, true, kiosk_mode_enable, false);
-#ifdef HAVE_MATERIALUI
-   SETTING_BOOL("materialui_icons_enable",            &settings->bools.menu_materialui_icons_enable, true, materialui_icons_enable, false);
-#endif
-#ifdef HAVE_XMB
-   SETTING_BOOL("xmb_shadows_enable",            &settings->bools.menu_xmb_shadows_enable, true, xmb_shadows_enable, false);
-   SETTING_BOOL("xmb_show_settings",             &settings->bools.menu_xmb_show_settings, true, xmb_show_settings, false);
-   SETTING_BOOL("xmb_show_favorites",            &settings->bools.menu_xmb_show_favorites, true, xmb_show_favorites, false);
+   SETTING_BOOL("content_show_settings",         &settings->bools.menu_content_show_settings, true, content_show_settings, false);
+   SETTING_BOOL("content_show_favorites",        &settings->bools.menu_content_show_favorites, true, content_show_favorites, false);
 #ifdef HAVE_IMAGEVIEWER
-   SETTING_BOOL("xmb_show_images",               &settings->bools.menu_xmb_show_images, true, xmb_show_images, false);
+   SETTING_BOOL("content_show_images",           &settings->bools.menu_content_show_images, true, content_show_images, false);
 #endif
-   SETTING_BOOL("xmb_show_music",                &settings->bools.menu_xmb_show_music, true, xmb_show_music, false);
+   SETTING_BOOL("content_show_music",            &settings->bools.menu_content_show_music, true, content_show_music, false);
+#ifdef HAVE_FFMPEG
+   SETTING_BOOL("content_show_video",            &settings->bools.menu_content_show_video, true, content_show_video, false);
+#endif
+#ifdef HAVE_NETWORKING
+   SETTING_BOOL("content_show_netplay",          &settings->bools.menu_content_show_netplay, true, content_show_netplay, false);
+#endif
+   SETTING_BOOL("content_show_history",          &settings->bools.menu_content_show_history, true, content_show_history, false);
+#ifdef HAVE_LIBRETRODB
+   SETTING_BOOL("content_show_add",              &settings->bools.menu_content_show_add, true, content_show_add, false);
+#endif
    SETTING_BOOL("menu_show_load_core",           &settings->bools.menu_show_load_core, true, menu_show_load_core, false);
    SETTING_BOOL("menu_show_load_content",        &settings->bools.menu_show_load_content, true, menu_show_load_content, false);
    SETTING_BOOL("menu_show_information",         &settings->bools.menu_show_information, true, menu_show_information, false);
@@ -1267,23 +1283,18 @@ static struct config_bool_setting *populate_settings_bool(settings_t *settings, 
    SETTING_BOOL("menu_show_reboot",              &settings->bools.menu_show_reboot, true, menu_show_reboot, false);
    SETTING_BOOL("menu_show_online_updater",      &settings->bools.menu_show_online_updater, true, menu_show_online_updater, false);
    SETTING_BOOL("menu_show_core_updater",        &settings->bools.menu_show_core_updater, true, menu_show_core_updater, false);
-#ifdef HAVE_FFMPEG
-   SETTING_BOOL("xmb_show_video",                &settings->bools.menu_xmb_show_video, true, xmb_show_video, false);
-#endif
-#ifdef HAVE_NETWORKING
-   SETTING_BOOL("xmb_show_netplay",              &settings->bools.menu_xmb_show_netplay, true, xmb_show_netplay, false);
-#endif
-   SETTING_BOOL("xmb_show_history",              &settings->bools.menu_xmb_show_history, true, xmb_show_history, false);
-#ifdef HAVE_LIBRETRODB
-   SETTING_BOOL("xmb_show_add",                  &settings->bools.menu_xmb_show_add, true, xmb_show_add, false);
-#endif
-#endif
    SETTING_BOOL("filter_by_current_core",        &settings->bools.filter_by_current_core, false, false /* TODO */, false);
    SETTING_BOOL("rgui_show_start_screen",        &settings->bools.menu_show_start_screen, false, false /* TODO */, false);
    SETTING_BOOL("menu_navigation_wraparound_enable", &settings->bools.menu_navigation_wraparound_enable, true, true, false);
    SETTING_BOOL("menu_navigation_browser_filter_supported_extensions_enable",
          &settings->bools.menu_navigation_browser_filter_supported_extensions_enable, true, true, false);
    SETTING_BOOL("menu_show_advanced_settings",  &settings->bools.menu_show_advanced_settings, true, show_advanced_settings, false);
+#ifdef HAVE_MATERIALUI
+   SETTING_BOOL("materialui_icons_enable",       &settings->bools.menu_materialui_icons_enable, true, materialui_icons_enable, false);
+#endif
+#ifdef HAVE_XMB
+   SETTING_BOOL("xmb_shadows_enable",            &settings->bools.menu_xmb_shadows_enable, true, xmb_shadows_enable, false);
+#endif
 #endif
 #ifdef HAVE_CHEEVOS
    SETTING_BOOL("cheevos_enable",               &settings->bools.cheevos_enable, true, cheevos_enable, false);
@@ -1400,6 +1411,7 @@ static struct config_uint_setting *populate_settings_uint(settings_t *settings, 
    SETTING_UINT("input_max_users",              input_driver_get_uint(INPUT_ACTION_MAX_USERS),        true, input_max_users, false);
    SETTING_UINT("input_menu_toggle_gamepad_combo", &settings->uints.input_menu_toggle_gamepad_combo, true, menu_toggle_gamepad_combo, false);
    SETTING_UINT("audio_latency",                &settings->uints.audio_latency, false, 0 /* TODO */, false);
+   SETTING_UINT("audio_resampler_quality",      &settings->uints.audio_resampler_quality, true, audio_resampler_quality_level, false);
    SETTING_UINT("audio_block_frames",           &settings->uints.audio_block_frames, true, 0, false);
    SETTING_UINT("rewind_granularity",           &settings->uints.rewind_granularity, true, rewind_granularity, false);
    SETTING_UINT("autosave_interval",            &settings->uints.autosave_interval,  true, autosave_interval, false);
@@ -1931,11 +1943,14 @@ static void config_set_defaults(void)
  **/
 static config_file_t *open_default_config_file(void)
 {
+   bool has_application_data              = false;
    size_t path_size                       = PATH_MAX_LENGTH * sizeof(char);
    char *application_data                 = (char*)malloc(PATH_MAX_LENGTH * sizeof(char));
    char *conf_path                        = (char*)malloc(PATH_MAX_LENGTH * sizeof(char));
    char *app_path                         = (char*)malloc(PATH_MAX_LENGTH * sizeof(char));
    config_file_t *conf                    = NULL;
+
+   (void)has_application_data;
 
    application_data[0] = conf_path[0] = app_path[0] = '\0';
 
@@ -2024,7 +2039,7 @@ static config_file_t *open_default_config_file(void)
       RARCH_WARN("Created new config file in: \"%s\".\n", conf_path);
    }
 #elif !defined(RARCH_CONSOLE)
-   bool has_application_data =
+   has_application_data =
       fill_pathname_application_data(application_data,
             path_size);
 
@@ -2229,15 +2244,15 @@ static bool check_shader_compatibility(enum file_path_enum enum_idx)
 {
    settings_t *settings = config_get_ptr();
 
-   if (string_is_equal_fast(settings->arrays.video_driver, "vulkan", 6))
+   if (string_is_equal(settings->arrays.video_driver, "vulkan"))
    {
       if (enum_idx != FILE_PATH_SLANGP_EXTENSION)
          return false;
       return true;
    }
 
-   if (string_is_equal_fast(settings->arrays.video_driver, "gl", 2) ||
-       string_is_equal_fast(settings->arrays.video_driver, "d3d", 3)
+   if (string_is_equal(settings->arrays.video_driver, "gl") ||
+       string_is_equal(settings->arrays.video_driver, "d3d")
       )
    {
       if (enum_idx == FILE_PATH_SLANGP_EXTENSION)
@@ -2504,6 +2519,7 @@ static bool config_load_file(const char *path, bool set_defaults,
       buf[0] = '\0';
 
       snprintf(buf, sizeof(buf), "led%u_map", i + 1);
+      settings->uints.led_map[i]=-1;
       CONFIG_GET_INT_BASE(conf, settings, uints.led_map[i], buf);
    }
 
@@ -2706,7 +2722,7 @@ static bool config_load_file(const char *path, bool set_defaults,
 
    if (!string_is_empty(settings->paths.directory_screenshot))
    {
-      if (string_is_equal_fast(settings->paths.directory_screenshot, "default", 7))
+      if (string_is_equal(settings->paths.directory_screenshot, "default"))
          *settings->paths.directory_screenshot = '\0';
       else if (!path_is_directory(settings->paths.directory_screenshot))
       {
@@ -2731,36 +2747,35 @@ static bool config_load_file(const char *path, bool set_defaults,
    }
 #endif
 
-   if (string_is_equal_fast(settings->paths.path_menu_wallpaper, "default", 7))
+   if (string_is_equal(settings->paths.path_menu_wallpaper, "default"))
       *settings->paths.path_menu_wallpaper = '\0';
-   if (string_is_equal_fast(settings->paths.directory_video_shader, "default", 7))
+   if (string_is_equal(settings->paths.directory_video_shader, "default"))
       *settings->paths.directory_video_shader = '\0';
-   if (string_is_equal_fast(settings->paths.directory_video_filter, "default", 7))
+   if (string_is_equal(settings->paths.directory_video_filter, "default"))
       *settings->paths.directory_video_filter = '\0';
-   if (string_is_equal_fast(settings->paths.directory_audio_filter, "default", 7))
+   if (string_is_equal(settings->paths.directory_audio_filter, "default"))
       *settings->paths.directory_audio_filter = '\0';
-   if (string_is_equal_fast(settings->paths.directory_core_assets, "default", 7))
+   if (string_is_equal(settings->paths.directory_core_assets, "default"))
       *settings->paths.directory_core_assets = '\0';
-   if (string_is_equal_fast(settings->paths.directory_assets, "default", 7))
+   if (string_is_equal(settings->paths.directory_assets, "default"))
       *settings->paths.directory_assets = '\0';
-   if (string_is_equal_fast(settings->paths.directory_dynamic_wallpapers, "default", 7))
+   if (string_is_equal(settings->paths.directory_dynamic_wallpapers, "default"))
       *settings->paths.directory_dynamic_wallpapers = '\0';
-   if (string_is_equal_fast(settings->paths.directory_thumbnails, "default", 7))
+   if (string_is_equal(settings->paths.directory_thumbnails, "default"))
       *settings->paths.directory_thumbnails = '\0';
-   if (string_is_equal_fast(settings->paths.directory_playlist, "default", 7))
+   if (string_is_equal(settings->paths.directory_playlist, "default"))
       *settings->paths.directory_playlist = '\0';
 #ifdef HAVE_MENU
-
-   if (string_is_equal_fast(settings->paths.directory_menu_content, "default", 7))
+   if (string_is_equal(settings->paths.directory_menu_content, "default"))
       *settings->paths.directory_menu_content = '\0';
-   if (string_is_equal_fast(settings->paths.directory_menu_config, "default", 7))
+   if (string_is_equal(settings->paths.directory_menu_config, "default"))
       *settings->paths.directory_menu_config = '\0';
 #endif
 #ifdef HAVE_OVERLAY
-   if (string_is_equal_fast(settings->paths.directory_overlay, "default", 7))
+   if (string_is_equal(settings->paths.directory_overlay, "default"))
       *settings->paths.directory_overlay = '\0';
 #endif
-   if (string_is_equal_fast(settings->paths.directory_system, "default", 7))
+   if (string_is_equal(settings->paths.directory_system, "default"))
       *settings->paths.directory_system = '\0';
 
    if (settings->floats.slowmotion_ratio < 1.0f)
@@ -2781,7 +2796,7 @@ static bool config_load_file(const char *path, bool set_defaults,
    if (!retroarch_override_setting_is_set(RARCH_OVERRIDE_SETTING_SAVE_PATH, NULL) &&
          config_get_path(conf, "savefile_directory", tmp_str, path_size))
    {
-      if (string_is_equal_fast(tmp_str, "default", 7))
+      if (string_is_equal(tmp_str, "default"))
          dir_set(RARCH_DIR_SAVEFILE, g_defaults.dirs[DEFAULT_DIR_SRAM]);
 
       else if (path_is_directory(tmp_str))
@@ -2807,7 +2822,7 @@ static bool config_load_file(const char *path, bool set_defaults,
    if (!retroarch_override_setting_is_set(RARCH_OVERRIDE_SETTING_STATE_PATH, NULL) &&
          config_get_path(conf, "savestate_directory", tmp_str, path_size))
    {
-      if (string_is_equal_fast(tmp_str, "default", 7))
+      if (string_is_equal(tmp_str, "default"))
          dir_set(RARCH_DIR_SAVESTATE, g_defaults.dirs[DEFAULT_DIR_SAVESTATE]);
       else if (path_is_directory(tmp_str))
       {

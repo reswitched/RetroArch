@@ -71,9 +71,9 @@
 #endif
 
 const GUID GUID_DEVINTERFACE_HID = { 0x4d1e55b2, 0xf16f, 0x11Cf, { 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 } };
-HDEVNOTIFY notification_handler;
-
-extern LRESULT win32_menu_loop(HWND owner, WPARAM wparam);
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x501
+static HDEVNOTIFY notification_handler;
+#endif
 
 #if defined(HAVE_D3D9) || defined(HAVE_D3D8)
 extern bool dinput_handle_message(void *dinput, UINT message,
@@ -93,6 +93,8 @@ static bool g_quit                  = false;
 static int g_pos_x                  = CW_USEDEFAULT;
 static int g_pos_y                  = CW_USEDEFAULT;
 static void *curD3D                 = NULL;
+static bool g_taskbar_is_created    = false;
+static unsigned g_taskbar_message   = 0;
 
 ui_window_win32_t main_window;
 
@@ -146,6 +148,16 @@ typedef REASON_CONTEXT POWER_REQUEST_CONTEXT, *PPOWER_REQUEST_CONTEXT, *LPPOWER_
 static HMONITOR win32_monitor_last;
 static HMONITOR win32_monitor_all[MAX_MONITORS];
 static unsigned win32_monitor_count              = 0;
+
+bool win32_taskbar_is_created(void)
+{
+   return g_taskbar_is_created;
+}
+
+void win32_set_taskbar_created(bool created)
+{
+   g_taskbar_is_created = created;
+}
 
 bool doubleclick_on_titlebar_pressed(void)
 {
@@ -447,8 +459,8 @@ static LRESULT win32_handle_keyboard_event(HWND hwnd, UINT message,
          if (message == WM_KEYUP || message == WM_SYSKEYUP)
             keydown = false;
 
-#if _WIN32_WINNT >= 0x0501
-         if (string_is_equal_fast(config_get_ptr()->arrays.input_driver, "raw", 4))
+#if _WIN32_WINNT >= 0x0501 /* XP */
+         if (string_is_equal(config_get_ptr()->arrays.input_driver, "raw"))
             keycode = input_keymaps_translate_keysym_to_rk((unsigned)(wparam));
          else
 #endif
@@ -579,6 +591,7 @@ LRESULT CALLBACK WndProcD3D(HWND hwnd, UINT message,
       case WM_CLOSE:
       case WM_DESTROY:
       case WM_QUIT:
+      case WM_SIZE:
       case WM_COMMAND:
          ret = WndProcCommon(&quit, hwnd, message, wparam, lparam);
          if (quit)
@@ -597,6 +610,11 @@ LRESULT CALLBACK WndProcD3D(HWND hwnd, UINT message,
          }
          return 0;
    }
+
+#if _WIN32_WINNT >= 0x0500 /* 2K */
+      if (g_taskbar_message && message == g_taskbar_message)
+         win32_set_taskbar_created(true);
+#endif
 
    if (dinput && dinput_handle_message(dinput,
             message, wparam, lparam))
@@ -645,6 +663,11 @@ LRESULT CALLBACK WndProcGL(HWND hwnd, UINT message,
          }
          return 0;
    }
+
+#if _WIN32_WINNT >= 0x0500 /* 2K */
+      if (g_taskbar_message && message == g_taskbar_message)
+         win32_set_taskbar_created(true);
+#endif
 
 #if defined(HAVE_D3D9) || defined(HAVE_D3D8)
    if (dinput_wgl && dinput_handle_message(dinput_wgl,
@@ -739,6 +762,11 @@ LRESULT CALLBACK WndProcGDI(HWND hwnd, UINT message,
          return 0;
    }
 
+#if _WIN32_WINNT >= 0x0500 /* 2K */
+      if (g_taskbar_message && message == g_taskbar_message)
+         win32_set_taskbar_created(true);
+#endif
+
 #if defined(HAVE_D3D9) || defined(HAVE_D3D8)
    if (dinput_gdi && dinput_handle_message(dinput_gdi,
             message, wparam, lparam))
@@ -751,7 +779,9 @@ bool win32_window_create(void *data, unsigned style,
       RECT *mon_rect, unsigned width,
       unsigned height, bool fullscreen)
 {
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0500 /* 2K */
    DEV_BROADCAST_DEVICEINTERFACE notification_filter;
+#endif
    settings_t *settings  = config_get_ptr();
 #ifndef _XBOX
    main_window.hwnd = CreateWindowEx(0,
@@ -764,25 +794,34 @@ bool win32_window_create(void *data, unsigned style,
    if (!main_window.hwnd)
       return false;
 
-   ZeroMemory( &notification_filter, sizeof(notification_filter) );
-   notification_filter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0500 /* 2K */
+   g_taskbar_message = RegisterWindowMessage("TaskbarButtonCreated");
+
+   ZeroMemory(&notification_filter, sizeof(notification_filter) );
+   notification_filter.dbcc_size       = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
    notification_filter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
-   notification_filter.dbcc_classguid = GUID_DEVINTERFACE_HID;
-   notification_handler = RegisterDeviceNotification(main_window.hwnd, &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
+   notification_filter.dbcc_classguid  = GUID_DEVINTERFACE_HID;
+   notification_handler                = RegisterDeviceNotification(
+	   main_window.hwnd, &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
 
    if (notification_handler)
       RARCH_ERR("Error registering for notifications\n");
+#endif
 
    video_driver_display_type_set(RARCH_DISPLAY_WIN32);
    video_driver_display_set(0);
    video_driver_window_set((uintptr_t)main_window.hwnd);
 
-#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0500
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0500 /* 2K */
    /* Windows 2000 and above use layered windows to enable transparency */
-   SetWindowLongPtr(main_window.hwnd,
-        GWL_EXSTYLE,
-        GetWindowLongPtr(main_window.hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-   SetLayeredWindowAttributes(main_window.hwnd, 0, (255 * settings->uints.video_window_opacity) / 100, LWA_ALPHA);
+   if(settings->uints.video_window_opacity < 100)
+   {
+      SetWindowLongPtr(main_window.hwnd,
+           GWL_EXSTYLE,
+           GetWindowLongPtr(main_window.hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+      SetLayeredWindowAttributes(main_window.hwnd, 0, (255 *
+               settings->uints.video_window_opacity) / 100, LWA_ALPHA);
+   }
 #endif
 #endif
    return true;
@@ -910,7 +949,7 @@ bool win32_suppress_screensaver(void *data, bool enable)
       if (frontend->get_os)
          frontend->get_os(tmp, sizeof(tmp), &major, &minor);
 
-      if (major*100+minor >= 601)
+      if (major * 100 + minor >= 601)
       {
 #if _WIN32_WINNT >= 0x0601
          /* Windows 7, 8, 10 codepath */
@@ -939,7 +978,7 @@ bool win32_suppress_screensaver(void *data, bool enable)
          }
 #endif
       }
-      else if (major*100+minor >= 410)
+      else if (major * 100 + minor >= 410)
       {
 #if _WIN32_WINDOWS >= 0x0410 || _WIN32_WINNT >= 0x0410
          /* 98 / 2K / XP / Vista codepath */
@@ -947,12 +986,12 @@ bool win32_suppress_screensaver(void *data, bool enable)
          return true;
 #endif
       }
-	  else
-	  {
+      else
+      {
          /* 95 / NT codepath */
-	     /* No way to block the screensaver. */
+         /* No way to block the screensaver. */
          return true;
-	  }
+      }
    }
 #endif
 
@@ -964,18 +1003,17 @@ void win32_set_style(MONITORINFOEX *current_mon, HMONITOR *hm_to_use,
    RECT *rect, RECT *mon_rect, DWORD *style)
 {
 #ifndef _XBOX
-   settings_t *settings = config_get_ptr();
-
-   /* Windows only reports the refresh rates for modelines as
-    * an integer, so video_refresh_rate needs to be rounded. Also, account
-    * for black frame insertion using video_refresh_rate set to half
-    * of the display refresh rate, as well as higher vsync swap intervals. */
-   float refresh_mod    = settings->bools.video_black_frame_insertion ? 2.0f : 1.0f;
-   unsigned refresh     = roundf(settings->floats.video_refresh_rate
-         * refresh_mod * settings->uints.video_swap_interval);
-
    if (fullscreen)
    {
+      settings_t *settings = config_get_ptr();
+      /* Windows only reports the refresh rates for modelines as
+       * an integer, so video_refresh_rate needs to be rounded. Also, account
+       * for black frame insertion using video_refresh_rate set to half
+       * of the display refresh rate, as well as higher vsync swap intervals. */
+      float refresh_mod    = settings->bools.video_black_frame_insertion ? 2.0f : 1.0f;
+      unsigned refresh     = roundf(settings->floats.video_refresh_rate
+            * refresh_mod * settings->uints.video_swap_interval);
+     
       if (windowed_full)
       {
          *style          = WS_EX_TOPMOST | WS_POPUP;
@@ -988,7 +1026,7 @@ void win32_set_style(MONITORINFOEX *current_mon, HMONITOR *hm_to_use,
 
          if (!win32_monitor_set_fullscreen(*width, *height,
                   refresh, current_mon->szDevice))
-          {}
+         {}
 
          /* Display settings might have changed, get new coordinates. */
          GetMonitorInfo(*hm_to_use, (LPMONITORINFO)current_mon);
@@ -997,10 +1035,12 @@ void win32_set_style(MONITORINFOEX *current_mon, HMONITOR *hm_to_use,
    }
    else
    {
-      *style       = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-      rect->right  = *width;
-      rect->bottom = *height;
+      *style          = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+      rect->right     = *width;
+      rect->bottom    = *height;
+
       AdjustWindowRect(rect, *style, FALSE);
+
       g_resize_width  = *width   = rect->right  - rect->left;
       g_resize_height = *height  = rect->bottom - rect->top;
    }
@@ -1145,7 +1185,11 @@ bool win32_has_focus(void)
 
 HWND win32_get_window(void)
 {
+#ifdef _XBOX
+   return NULL;
+#else
    return main_window.hwnd;
+#endif
 }
 
 void win32_window_reset(void)
@@ -1158,8 +1202,10 @@ void win32_destroy_window(void)
 {
 #ifndef _XBOX
    UnregisterClass("RetroArch", GetModuleHandle(NULL));
-#endif
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x500 /* 2K */
    UnregisterDeviceNotification(notification_handler);
+#endif
+#endif
    main_window.hwnd = NULL;
 }
 
@@ -1167,7 +1213,7 @@ void win32_get_video_output_prev(
       unsigned *width, unsigned *height)
 {
    DEVMODE dm;
-   int iModeNum;
+   unsigned i;
    bool found           = false;
    unsigned prev_width  = 0;
    unsigned prev_height = 0;
@@ -1180,9 +1226,9 @@ void win32_get_video_output_prev(
 
    win32_get_video_output_size(&curr_width, &curr_height);
 
-   for (iModeNum = 0;
-         EnumDisplaySettings(NULL, iModeNum, &dm) != 0;
-         iModeNum++)
+   for (i = 0;
+         EnumDisplaySettings(NULL, i, &dm) != 0;
+         i++)
    {
       if (     dm.dmPelsWidth == curr_width
             && dm.dmPelsHeight == curr_height)
@@ -1210,7 +1256,7 @@ void win32_get_video_output_next(
       unsigned *width, unsigned *height)
 {
    DEVMODE dm;
-   int iModeNum;
+   int i;
    bool found           = false;
    unsigned curr_width  = 0;
    unsigned curr_height = 0;
@@ -1220,9 +1266,9 @@ void win32_get_video_output_next(
 
    win32_get_video_output_size(&curr_width, &curr_height);
 
-   for (iModeNum = 0;
-         EnumDisplaySettings(NULL, iModeNum, &dm) != 0;
-         iModeNum++)
+   for (i = 0;
+         EnumDisplaySettings(NULL, i, &dm) != 0;
+         i++)
    {
       if (found)
       {

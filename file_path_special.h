@@ -21,6 +21,10 @@
 #include <stddef.h>
 
 #include <boolean.h>
+#include <retro_common_api.h>
+#include <retro_environment.h>
+
+RETRO_BEGIN_DECLS
 
 enum file_path_enum
 {
@@ -126,19 +130,12 @@ enum application_special_type
 void fill_short_pathname_representation_wrapper(char* out_rep,
       const char *in_path, size_t size);
 
-/**
- * path_basedir:
- * @path               : path
- *
- * Extracts base directory by mutating path.
- * Keeps trailing '/'.
- **/
-void path_basedir_wrapper(char *path);
-
 const char *file_path_str(enum file_path_enum enum_idx);
 
 bool fill_pathname_application_data(char *s, size_t len);
 
 void fill_pathname_application_special(char *s, size_t len, enum application_special_type type);
+
+RETRO_END_DECLS
 
 #endif

@@ -172,7 +172,7 @@ static void x11_set_window_pid(Display *dpy, Window win)
     errno = 0;
     if((scret = sysconf(_SC_HOST_NAME_MAX)) == -1 && errno)
         return;
-    if((hostname = malloc(scret + 1)) == NULL)
+    if((hostname = (char*)malloc(scret + 1)) == NULL)
         return;
 
     if(gethostname(hostname, scret + 1) == -1)
@@ -386,6 +386,7 @@ bool x11_get_metrics(void *data,
 static void x11_handle_key_event(XEvent *event, XIC ic, bool filter)
 {
    int i;
+   Status status;
    uint32_t chars[32];
    unsigned key   = 0;
    uint16_t mod   = 0;
@@ -404,7 +405,7 @@ static void x11_handle_key_event(XEvent *event, XIC ic, bool filter)
 
          keybuf[0] = '\0';
 #ifdef X_HAVE_UTF8_STRING
-         Status status = 0;
+         status = 0;
 
          /* XwcLookupString doesn't seem to work. */
          num = Xutf8LookupString(ic, &event->xkey, keybuf, ARRAY_SIZE(keybuf), &keysym, &status);

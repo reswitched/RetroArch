@@ -688,8 +688,6 @@ void gl_load_texture_data(
       glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-
-#if defined(HAVE_MENU)
 static void gl_set_texture_frame(void *data,
       const void *frame, bool rgb32, unsigned width, unsigned height,
       float alpha)
@@ -855,6 +853,7 @@ static void gl_set_osd_msg(void *data,
    font_driver_render_msg(video_info, font, msg, params);
 }
 
+#if defined(HAVE_MENU)
 static void gl_show_mouse(void *data, bool state)
 {
    video_context_driver_show_mouse(&state);
@@ -867,32 +866,6 @@ static struct video_shader *gl_get_current_shader(void *data)
    video_shader_driver_direct_get_current_shader(&shader_info);
 
    return shader_info.data;
-}
-
-static void gl_pbo_async_readback(gl_t *gl)
-{
-#ifdef HAVE_OPENGLES
-   GLenum fmt  = GL_RGBA;
-   GLenum type = GL_UNSIGNED_BYTE;
-#else
-   GLenum fmt  = GL_BGRA;
-   GLenum type = GL_UNSIGNED_INT_8_8_8_8_REV;
-#endif
-
-   if (gl->renderchain_driver->bind_pbo)
-      gl->renderchain_driver->bind_pbo(
-         gl->pbo_readback[gl->pbo_readback_index++]);
-   gl->pbo_readback_index &= 3;
-
-   /* 4 frames back, we can readback. */
-   gl->pbo_readback_valid[gl->pbo_readback_index] = true;
-
-   if (gl->renderchain_driver->readback)
-      gl->renderchain_driver->readback(gl, gl->renderchain_data,
-            video_pixel_get_alignment(gl->vp.width * sizeof(uint32_t)),
-            fmt, type, NULL);
-   if (gl->renderchain_driver->unbind_pbo)
-      gl->renderchain_driver->unbind_pbo(gl, gl->renderchain_data);
 }
 
 static INLINE void gl_draw_texture(gl_t *gl, video_frame_info_t *video_info)
@@ -956,6 +929,32 @@ static INLINE void gl_draw_texture(gl_t *gl, video_frame_info_t *video_info)
    gl->coords.color       = gl->white_color_ptr;
 }
 #endif
+
+static void gl_pbo_async_readback(gl_t *gl)
+{
+#ifdef HAVE_OPENGLES
+   GLenum fmt  = GL_RGBA;
+   GLenum type = GL_UNSIGNED_BYTE;
+#else
+   GLenum fmt  = GL_BGRA;
+   GLenum type = GL_UNSIGNED_INT_8_8_8_8_REV;
+#endif
+
+   if (gl->renderchain_driver->bind_pbo)
+      gl->renderchain_driver->bind_pbo(
+         gl->pbo_readback[gl->pbo_readback_index++]);
+   gl->pbo_readback_index &= 3;
+
+   /* 4 frames back, we can readback. */
+   gl->pbo_readback_valid[gl->pbo_readback_index] = true;
+
+   if (gl->renderchain_driver->readback)
+      gl->renderchain_driver->readback(gl, gl->renderchain_data,
+            video_pixel_get_alignment(gl->vp.width * sizeof(uint32_t)),
+            fmt, type, NULL);
+   if (gl->renderchain_driver->unbind_pbo)
+      gl->renderchain_driver->unbind_pbo(gl, gl->renderchain_data);
+}
 
 
 static bool gl_frame(void *data, const void *frame,
@@ -1189,6 +1188,8 @@ static bool gl_frame(void *data, const void *frame,
 #endif
             gl_pbo_async_readback(gl);
 
+   /* emscripten has to do black frame insertion in its main loop */
+#ifndef EMSCRIPTEN
    /* Disable BFI during fast forward, slow-motion,
     * and pause to prevent flicker. */
    if (
@@ -1200,10 +1201,12 @@ static bool gl_frame(void *data, const void *frame,
       video_info->cb_swap_buffers(video_info->context_data, video_info);
       glClear(GL_COLOR_BUFFER_BIT);
    }
+#endif
 
    video_info->cb_swap_buffers(video_info->context_data, video_info);
 
-   if (video_info->hard_sync && gl->have_sync)
+   /* check if we are fast forwarding, if we are ignore hard sync */
+   if (gl->have_sync && video_info->hard_sync && !video_info->input_driver_nonblock_state)
    {
       glClear(GL_COLOR_BUFFER_BIT);
 
@@ -1346,7 +1349,6 @@ static bool resolve_extensions(gl_t *gl, const char *context_ident, const video_
     *
     * have_sync       - Use ARB_sync to reduce latency.
     */
-   gl->has_fbo                   = gl_check_capability(GL_CAPS_FBO);
    gl->have_full_npot_support    = gl_check_capability(GL_CAPS_FULL_NPOT_SUPPORT);
    gl->have_mipmap               = gl_check_capability(GL_CAPS_MIPMAP);
    gl->have_es2_compat           = gl_check_capability(GL_CAPS_ES2_COMPAT);
@@ -1784,6 +1786,12 @@ static void *gl_init(const video_info_t *video, const input_driver_t **input, vo
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glBlendEquation(GL_FUNC_ADD);
 
+   gl->hw_render_use    = false;
+   gl->has_fbo          = gl_check_capability(GL_CAPS_FBO);
+
+   if (gl->has_fbo && hwr->context_type != RETRO_HW_CONTEXT_NONE)
+      gl->hw_render_use = true;
+
    if (!resolve_extensions(gl, ctx_driver->ident, video))
       goto error;
 
@@ -1821,10 +1829,6 @@ static void *gl_init(const video_info_t *video, const input_driver_t **input, vo
     * but still need multiple textures with PREV.
     */
    gl->textures         = 4;
-   gl->hw_render_use    = false;
-
-   if (gl->has_fbo && hwr->context_type != RETRO_HW_CONTEXT_NONE)
-      gl->hw_render_use = true;
 
    if (gl->hw_render_use)
    {
@@ -2554,15 +2558,12 @@ static const video_poke_interface_t gl_poke_interface = {
    gl_get_proc_address,
    gl_set_aspect_ratio,
    gl_apply_state_changes,
-#if defined(HAVE_MENU)
    gl_set_texture_frame,
    gl_set_texture_enable,
    gl_set_osd_msg,
+#if defined(HAVE_MENU)
    gl_show_mouse,
 #else
-   NULL,
-   NULL,
-   NULL,
    NULL,
 #endif
 

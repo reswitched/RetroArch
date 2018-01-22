@@ -117,6 +117,101 @@ static char *lakka_get_project(void)
 #endif
 #endif
 
+#define action_ok_dl_lbl(a, b) \
+   info.directory_ptr = idx; \
+   info.type          = type; \
+   info_path          = path; \
+   info_label         = msg_hash_to_str(a); \
+   info.enum_idx      = a; \
+   dl_type            = b;
+
+static enum msg_hash_enums action_ok_dl_to_enum(unsigned lbl)
+{
+   switch (lbl)
+   {
+      case ACTION_OK_DL_ACCOUNTS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_LIST;
+      case ACTION_OK_DL_INPUT_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_INPUT_SETTINGS_LIST;
+      case ACTION_OK_DL_DRIVER_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_DRIVER_SETTINGS_LIST;
+      case ACTION_OK_DL_CORE_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_CORE_SETTINGS_LIST;
+      case ACTION_OK_DL_VIDEO_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_VIDEO_SETTINGS_LIST;
+      case ACTION_OK_DL_CONFIGURATION_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_CONFIGURATION_SETTINGS_LIST;
+      case ACTION_OK_DL_SAVING_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_SAVING_SETTINGS_LIST;
+      case ACTION_OK_DL_LOGGING_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_LOGGING_SETTINGS_LIST;
+      case ACTION_OK_DL_FRAME_THROTTLE_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_FRAME_THROTTLE_SETTINGS_LIST;
+      case ACTION_OK_DL_REWIND_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_REWIND_SETTINGS_LIST;
+      case ACTION_OK_DL_ONSCREEN_DISPLAY_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_ONSCREEN_DISPLAY_SETTINGS_LIST;
+      case ACTION_OK_DL_ONSCREEN_NOTIFICATIONS_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_ONSCREEN_NOTIFICATIONS_SETTINGS_LIST;
+      case ACTION_OK_DL_ONSCREEN_OVERLAY_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_ONSCREEN_OVERLAY_SETTINGS_LIST;
+      case ACTION_OK_DL_MENU_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_MENU_SETTINGS_LIST;
+      case ACTION_OK_DL_MENU_VIEWS_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_MENU_VIEWS_SETTINGS_LIST;
+      case ACTION_OK_DL_QUICK_MENU_VIEWS_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_QUICK_MENU_VIEWS_SETTINGS_LIST;
+      case ACTION_OK_DL_USER_INTERFACE_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_USER_INTERFACE_SETTINGS_LIST;
+      case ACTION_OK_DL_MENU_FILE_BROWSER_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_MENU_FILE_BROWSER_SETTINGS_LIST;
+      case ACTION_OK_DL_RETRO_ACHIEVEMENTS_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_RETRO_ACHIEVEMENTS_SETTINGS_LIST;
+      case ACTION_OK_DL_UPDATER_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_UPDATER_SETTINGS_LIST;
+      case ACTION_OK_DL_NETWORK_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_NETWORK_SETTINGS_LIST;
+      case ACTION_OK_DL_WIFI_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_WIFI_SETTINGS_LIST;
+      case ACTION_OK_DL_NETPLAY:
+         return MENU_ENUM_LABEL_DEFERRED_NETPLAY;
+      case ACTION_OK_DL_NETPLAY_LAN_SCAN_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_NETPLAY_LAN_SCAN_SETTINGS_LIST;
+      case ACTION_OK_DL_LAKKA_SERVICES_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_LAKKA_SERVICES_LIST;
+      case ACTION_OK_DL_USER_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_USER_SETTINGS_LIST;
+      case ACTION_OK_DL_DIRECTORY_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_DIRECTORY_SETTINGS_LIST;
+      case ACTION_OK_DL_PRIVACY_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_PRIVACY_SETTINGS_LIST;
+      case ACTION_OK_DL_AUDIO_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_AUDIO_SETTINGS_LIST;
+      case ACTION_OK_DL_INPUT_HOTKEY_BINDS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_INPUT_HOTKEY_BINDS_LIST;
+      case ACTION_OK_DL_RECORDING_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_RECORDING_SETTINGS_LIST;
+      case ACTION_OK_DL_PLAYLIST_SETTINGS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_PLAYLIST_SETTINGS_LIST;
+      case ACTION_OK_DL_ACCOUNTS_CHEEVOS_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_CHEEVOS_LIST;
+      case ACTION_OK_DL_PLAYLIST_COLLECTION:
+         return MENU_ENUM_LABEL_DEFERRED_PLAYLIST_LIST;
+      case ACTION_OK_DL_FAVORITES_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_FAVORITES_LIST;
+      case ACTION_OK_DL_BROWSE_URL_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_BROWSE_URL_LIST;
+      case ACTION_OK_DL_MUSIC_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_MUSIC_LIST;
+      case ACTION_OK_DL_IMAGES_LIST:
+         return MENU_ENUM_LABEL_DEFERRED_IMAGES_LIST;
+      default:
+         break;
+   }
+
+   return MSG_UNKNOWN;
+}
+
 int generic_action_ok_displaylist_push(const char *path,
       const char *new_path,
       const char *label, unsigned type, size_t idx, size_t entry_idx,
@@ -157,24 +252,6 @@ int generic_action_ok_displaylist_push(const char *path,
                MENU_ENUM_LABEL_DEFERRED_BROWSE_URL_START);
          info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_BROWSE_URL_START;
          dl_type            = DISPLAYLIST_GENERIC;
-         break;
-      case ACTION_OK_DL_FAVORITES_LIST:
-         info.type          = type;
-         info.directory_ptr = idx;
-         info_path          = label;
-         info_label         = msg_hash_to_str(
-               MENU_ENUM_LABEL_DEFERRED_FAVORITES_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_FAVORITES_LIST;
-         dl_type           = DISPLAYLIST_GENERIC;
-         break;
-      case ACTION_OK_DL_IMAGES_LIST:
-         info.type          = type;
-         info.directory_ptr = idx;
-         info_path          = label;
-         info_label         = msg_hash_to_str(
-               MENU_ENUM_LABEL_DEFERRED_IMAGES_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_IMAGES_LIST;
-         dl_type           = DISPLAYLIST_GENERIC;
          break;
       case ACTION_OK_DL_VIDEO_LIST:
          info.type          = type;
@@ -367,24 +444,6 @@ int generic_action_ok_displaylist_push(const char *path,
          info_label         = label;
          dl_type            = DISPLAYLIST_FILE_BROWSER_SELECT_FILE;
          break;
-      case ACTION_OK_DL_PLAYLIST_COLLECTION:
-         info.type          = type;
-         info.directory_ptr = idx;
-         info_path          = path;
-         info_label         = msg_hash_to_str(
-               MENU_ENUM_LABEL_DEFERRED_PLAYLIST_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_PLAYLIST_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
-      case ACTION_OK_DL_MUSIC_LIST:
-         info.type          = type;
-         info.directory_ptr = idx;
-         info_path          = label;
-         info_label         = msg_hash_to_str(
-               MENU_ENUM_LABEL_DEFERRED_MUSIC_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_MUSIC_LIST;
-         dl_type           = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_CHEAT_FILE:
          filebrowser_clear_type();
          info.type          = type;
@@ -400,14 +459,6 @@ int generic_action_ok_displaylist_push(const char *path,
          info_path          = settings->paths.directory_libretro;
          info_label         = label;
          dl_type            = DISPLAYLIST_FILE_BROWSER_SELECT_CORE;
-         break;
-      case ACTION_OK_DL_BROWSE_URL_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_BROWSE_URL_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_BROWSE_URL_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
          break;
       case ACTION_OK_DL_CONTENT_COLLECTION_LIST:
          info.type          = type;
@@ -604,268 +655,44 @@ int generic_action_ok_displaylist_push(const char *path,
          dl_type                            = DISPLAYLIST_GENERIC;
          break;
       case ACTION_OK_DL_ACCOUNTS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_INPUT_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_INPUT_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_INPUT_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_DRIVER_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_DRIVER_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_DRIVER_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_CORE_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_CORE_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_CORE_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_VIDEO_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_VIDEO_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_VIDEO_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_CONFIGURATION_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_CONFIGURATION_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_CONFIGURATION_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_SAVING_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_SAVING_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_SAVING_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_LOGGING_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_LOGGING_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_LOGGING_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_FRAME_THROTTLE_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_FRAME_THROTTLE_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_FRAME_THROTTLE_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_REWIND_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_REWIND_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_REWIND_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_ONSCREEN_DISPLAY_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ONSCREEN_DISPLAY_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_ONSCREEN_DISPLAY_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_ONSCREEN_NOTIFICATIONS_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ONSCREEN_NOTIFICATIONS_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_ONSCREEN_NOTIFICATIONS_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_ONSCREEN_OVERLAY_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ONSCREEN_OVERLAY_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_ONSCREEN_OVERLAY_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_MENU_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_MENU_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_MENU_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_MENU_VIEWS_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_MENU_VIEWS_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_MENU_VIEWS_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_QUICK_MENU_VIEWS_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_QUICK_MENU_VIEWS_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_QUICK_MENU_VIEWS_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_USER_INTERFACE_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_USER_INTERFACE_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_USER_INTERFACE_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_MENU_FILE_BROWSER_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_MENU_FILE_BROWSER_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_MENU_FILE_BROWSER_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_RETRO_ACHIEVEMENTS_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_RETRO_ACHIEVEMENTS_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_RETRO_ACHIEVEMENTS_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_UPDATER_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_UPDATER_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_UPDATER_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_NETWORK_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_NETWORK_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_NETWORK_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_WIFI_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_WIFI_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_WIFI_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_NETPLAY:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_NETPLAY);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_NETPLAY;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_NETPLAY_LAN_SCAN_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_NETPLAY_LAN_SCAN_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_NETPLAY_LAN_SCAN_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_LAKKA_SERVICES_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_LAKKA_SERVICES_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_LAKKA_SERVICES_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_USER_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_USER_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_USER_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_DIRECTORY_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_DIRECTORY_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_DIRECTORY_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_PRIVACY_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_PRIVACY_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_PRIVACY_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_AUDIO_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_AUDIO_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_AUDIO_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_INPUT_HOTKEY_BINDS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_INPUT_HOTKEY_BINDS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_INPUT_HOTKEY_BINDS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_RECORDING_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_RECORDING_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_RECORDING_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_PLAYLIST_SETTINGS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_PLAYLIST_SETTINGS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_PLAYLIST_SETTINGS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
-         break;
       case ACTION_OK_DL_ACCOUNTS_CHEEVOS_LIST:
-         info.directory_ptr = idx;
-         info.type          = type;
-         info_path          = path;
-         info_label         = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_CHEEVOS_LIST);
-         info.enum_idx      = MENU_ENUM_LABEL_DEFERRED_ACCOUNTS_CHEEVOS_LIST;
-         dl_type            = DISPLAYLIST_GENERIC;
+      case ACTION_OK_DL_PLAYLIST_COLLECTION:
+      case ACTION_OK_DL_FAVORITES_LIST:
+      case ACTION_OK_DL_BROWSE_URL_LIST:
+      case ACTION_OK_DL_MUSIC_LIST:
+      case ACTION_OK_DL_IMAGES_LIST:
+         action_ok_dl_lbl(action_ok_dl_to_enum(action_type), DISPLAYLIST_GENERIC);
          break;
       case ACTION_OK_DL_CONTENT_SETTINGS:
          info.list          = menu_entries_get_selection_buf_ptr(0);
@@ -1344,23 +1171,23 @@ static int generic_action_ok(const char *path,
          break;
       case ACTION_OK_SET_DIRECTORY:
          flush_char = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_DIRECTORY_SETTINGS_LIST);
-         ret = set_path_generic(filebrowser_label, action_path);
+         ret        = set_path_generic(filebrowser_label, action_path);
          break;
       case ACTION_OK_SET_PATH_VIDEO_FILTER:
          flush_char = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_VIDEO_SETTINGS_LIST);
-         ret = set_path_generic(menu_label, action_path);
+         ret        = set_path_generic(menu_label, action_path);
          break;
       case ACTION_OK_SET_PATH_AUDIO_FILTER:
          flush_char = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_AUDIO_SETTINGS_LIST);
-         ret = set_path_generic(menu_label, action_path);
+         ret        = set_path_generic(menu_label, action_path);
          break;
       case ACTION_OK_SET_PATH_OVERLAY:
          flush_char = msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_ONSCREEN_OVERLAY_SETTINGS_LIST);
-         ret = set_path_generic(menu_label, action_path);
+         ret        = set_path_generic(menu_label, action_path);
          break;
       case ACTION_OK_SET_PATH:
          flush_type = MENU_SETTINGS;
-         ret = set_path_generic(menu_label, action_path);
+         ret        = set_path_generic(menu_label, action_path);
          break;
       default:
          flush_char = msg_hash_to_str(flush_id);
@@ -1382,13 +1209,16 @@ static int default_action_ok_load_content_with_core_from_menu(const char *_path,
    content_info.argv                   = NULL;
    content_info.args                   = NULL;
    content_info.environ_get            = NULL;
-   if (!task_push_load_content_with_core_from_menu(_path, &content_info, (enum rarch_core_type)_type, NULL, NULL))
+   if (!task_push_load_content_with_core_from_menu(
+            _path, &content_info,
+            (enum rarch_core_type)_type, NULL, NULL))
       return -1;
    content_add_to_playlist(_path);
    return 0;
 }
 
-static int default_action_ok_load_content_from_playlist_from_menu(const char *_path, const char *path, const char *entry_label)
+static int default_action_ok_load_content_from_playlist_from_menu(const char *_path,
+      const char *path, const char *entry_label)
 {
    content_ctx_info_t content_info;
    content_info.argc                   = 0;
@@ -1574,7 +1404,8 @@ static int action_ok_playlist_entry_collection(const char *path,
    playlist_get_index(playlist,
          playlist_info.idx, &path, NULL, NULL, NULL, NULL, NULL);
 
-   return default_action_ok_load_content_from_playlist_from_menu(new_core_path, path, entry_label);
+   return default_action_ok_load_content_from_playlist_from_menu(
+         new_core_path, path, entry_label);
 }
 
 static int action_ok_playlist_entry(const char *path,
@@ -1912,9 +1743,9 @@ static void menu_input_st_string_cb_enable_settings(void *userdata,
       const char *label = menu_input_dialog_get_buffer();
       settings_t *settings = config_get_ptr();
 
-      if (string_is_equal(label, settings->paths.menu_xmb_show_settings_password))
+      if (string_is_equal(label, settings->paths.menu_content_show_settings_password))
       {
-         settings->bools.menu_xmb_show_settings = true;
+         settings->bools.menu_content_show_settings = true;
 
          runloop_msg_queue_push(
             msg_hash_to_str(MSG_INPUT_ENABLE_SETTINGS_PASSWORD_OK),

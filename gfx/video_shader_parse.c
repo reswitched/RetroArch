@@ -537,7 +537,7 @@ bool video_shader_resolve_parameters(config_file_t *conf,
       /* First try to use the more robust slang implementation to support #includes. */
       /* FIXME: The check for slang can be removed if it's sufficiently tested for
        * GLSL/Cg as well, it should be the same implementation. */
-      if (string_is_equal_fast(path_get_extension(path), "slang", 5) &&
+      if (string_is_equal(path_get_extension(path), "slang") &&
             slang_preprocess_parse_parameters(shader->pass[i].source.path, shader))
       {
          free(line);
@@ -587,6 +587,7 @@ bool video_shader_resolve_parameters(config_file_t *conf,
 
       free(line);
       intfstream_close(file);
+      free(file);
    }
 
    if (conf && !video_shader_resolve_current_parameters(conf, shader))
@@ -1093,13 +1094,12 @@ enum rarch_shader_type video_shader_parse_type(const char *path,
       enum rarch_shader_type fallback)
 {
    enum rarch_shader_type shader_type = RARCH_SHADER_NONE;
-   enum gfx_ctx_api api = video_context_driver_get_api();
-
-   #ifdef HAVE_CG
-   bool cg_supported = true;
-   #else
-   bool cg_supported = false;
-   #endif
+   enum gfx_ctx_api api               = video_context_driver_get_api();
+#ifdef HAVE_CG
+   bool cg_supported                  = true;
+#else
+   bool cg_supported                  = false;
+#endif
 
    if (!path)
       return fallback;
@@ -1117,12 +1117,15 @@ enum rarch_shader_type video_shader_parse_type(const char *path,
          break;
       case FILE_TYPE_SHADER_SLANG:
       case FILE_TYPE_SHADER_PRESET_SLANGP:
+#ifdef __wiiu__
+         return RARCH_SHADER_SLANG;
+#else
          shader_type = RARCH_SHADER_SLANG;
          break;
+#endif
       default:
          break;
    }
-
    switch (api)
    {
       case GFX_CTX_OPENGL_API:

@@ -868,16 +868,16 @@ static void retroarch_parse_input(int argc, char *argv[])
             break;
 
          case 'M':
-            if (string_is_equal_fast(optarg, "noload-nosave", 13))
+            if (string_is_equal(optarg, "noload-nosave"))
             {
                rarch_is_sram_load_disabled = true;
                rarch_is_sram_save_disabled = true;
             }
-            else if (string_is_equal_fast(optarg, "noload-save", 11))
+            else if (string_is_equal(optarg, "noload-save"))
                rarch_is_sram_load_disabled = true;
-            else if (string_is_equal_fast(optarg, "load-nosave", 11))
+            else if (string_is_equal(optarg, "load-nosave"))
                rarch_is_sram_save_disabled = true;
-            else if (string_is_not_equal_fast(optarg, "load-save", 9))
+            else if (string_is_not_equal(optarg, "load-save"))
             {
                RARCH_ERR("Invalid argument in --sram-mode.\n");
                retroarch_print_help(argv[0]);
@@ -2364,7 +2364,9 @@ static enum runloop_state runloop_check_state(
       unsigned *sleep_ms)
 {
    retro_bits_t current_input;
+#ifdef HAVE_MENU
    static retro_bits_t last_input   = {{0}};
+#endif
    static bool old_fs_toggle_pressed= false;
    static bool old_focus            = true;
    bool is_focused                  = false;
@@ -2383,9 +2385,8 @@ static enum runloop_state runloop_check_state(
 #endif
 	   input_keys_pressed(settings, &current_input);
 
-   last_input                       = current_input;
-
 #ifdef HAVE_MENU
+   last_input                       = current_input;
    if (
          ((settings->uints.input_menu_toggle_gamepad_combo != INPUT_TOGGLE_NONE) &&
           input_driver_toggle_button_combo(
